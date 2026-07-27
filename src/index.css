@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+@theme {
+  /* surfaces */
+  --color-paper: #f4f2ed;
+  --color-card: #fbfaf7;
+  --color-line: #e8e5de;
+  --color-empty: #e5e3de;
+
+  /* ink */
+  --color-ink: #111111;
+  --color-body: #6b6862;
+  --color-muted: #9a978f;
+
+  /* purple ramp — spending */
+  --color-p0: #efeaf9;
+  --color-p1: #dcd0f2;
+  --color-p2: #c0aae8;
+  --color-p3: #9d7ed9;
+  --color-p4: #7a53c4;
+  --color-p5: #5b2ea8;
+
+  /* green ramp — inflow */
+  --color-g0: #dfeae1;
+  --color-g1: #9cc0a4;
+  --color-g2: #6f9a79;
+  --color-g3: #39603f;
+
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter,
+    Helvetica, Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* thin scrollbar for the horizontally-scrolling calendar */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d6d2c9 transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #d6d2c9;
+  border-radius: 99px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.35s ease both;
+}
