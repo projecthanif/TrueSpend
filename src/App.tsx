@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { Upload } from './components/Upload'
 import { MappingReview } from './components/MappingReview'
 import { IdentityPanel } from './components/IdentityPanel'
@@ -86,24 +87,28 @@ export default function App() {
   if (pending.length) {
     const item = pending[0]
     return (
-      <main className="mx-auto min-h-screen max-w-7xl px-5 py-7 sm:px-8 sm:py-10">
-        <ProductMark />
-        <MappingReview
-          fileName={item.fileName}
-          table={item.table}
-          map={item.map}
-          reason={item.reason}
-          onConfirm={(map) => confirmMapping(item, map)}
-          onCancel={() => setPending((prev) => prev.filter((p) => p.id !== item.id))}
-        />
-      </main>
+      <>
+        <main className="mx-auto min-h-screen max-w-7xl px-5 py-7 sm:px-8 sm:py-10">
+          <ProductMark />
+          <MappingReview
+            fileName={item.fileName}
+            table={item.table}
+            map={item.map}
+            reason={item.reason}
+            onConfirm={(map) => confirmMapping(item, map)}
+            onCancel={() => setPending((prev) => prev.filter((p) => p.id !== item.id))}
+          />
+        </main>
+        <Analytics />
+      </>
     )
   }
 
   // --- nothing loaded yet --------------------------------------------------
   if (!model) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-7 sm:px-8 sm:py-10">
+      <>
+        <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-7 sm:px-8 sm:py-10">
         <header className="flex items-center justify-between border-b border-line pb-5">
           <ProductMark />
           <div className="flex items-center gap-2 text-[12px] font-medium text-body">
@@ -144,6 +149,8 @@ export default function App() {
           <span>Balance trend</span>
         </footer>
       </main>
+        <Analytics />
+      </>
     )
   }
 
@@ -251,6 +258,7 @@ export default function App() {
           </ul>
         )}
       </main>
+      <Analytics />
     </FormatProvider>
   )
 }
