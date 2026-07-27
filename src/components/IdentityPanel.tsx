@@ -40,14 +40,14 @@ function Chips({
         {items.map((v) => (
           <span
             key={v}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-p0 py-1.5 pl-3 pr-2 text-[13px] text-p5"
+            className="inline-flex items-center gap-1.5 border border-line bg-card py-1.5 pl-3 pr-2 text-[12px] text-ink"
           >
             {v}
             <button
               type="button"
               onClick={() => onRemove(v)}
               aria-label={`Remove ${v}`}
-              className="cursor-pointer rounded px-1 text-[15px] leading-none text-p3 transition hover:text-p5"
+              className="cursor-pointer px-1 text-[15px] leading-none text-muted transition-colors hover:text-ink"
             >
               ×
             </button>
@@ -64,7 +64,7 @@ function Chips({
           }}
           onBlur={submit}
           placeholder={placeholder}
-          className="min-w-[190px] flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-[13px] outline-none transition placeholder:text-muted focus:border-p3"
+          className="min-w-[190px] flex-1 border-0 border-b border-line bg-transparent px-1 py-1.5 text-[12px] outline-none transition-colors placeholder:text-muted focus:border-ink"
         />
       </div>
     </div>
@@ -80,14 +80,14 @@ export function IdentityPanel({ identity, currency, onChange, onCurrencyChange, 
   const [open, setOpen] = useState(false)
 
   return (
-    <section className="rounded-3xl border border-line bg-card px-7 py-5">
+    <section className="border-y border-line py-5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full cursor-pointer items-center justify-between gap-4 text-left"
       >
         <div>
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.18em] text-body">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-body">
             This is me
           </h2>
           <p className="mt-1 text-[13.5px] text-muted">
@@ -96,11 +96,13 @@ export function IdentityPanel({ identity, currency, onChange, onCurrencyChange, 
               : 'No name detected — add yours so self-transfers stop counting as income'}
           </p>
         </div>
-        <span className="shrink-0 text-[13px] text-p5">{open ? 'Done' : 'Edit'}</span>
+        <span className="shrink-0 border-b border-line pb-0.5 text-[12px] font-medium text-ink">
+          {open ? 'Done' : 'Edit'}
+        </span>
       </button>
 
       {open && (
-        <div className="mt-6 grid gap-6 border-t border-line pt-6 md:grid-cols-2">
+        <div className="mt-5 grid gap-7 border-t border-line pt-6 md:grid-cols-2">
           <Chips
             label="Your names"
             hint="Add every spelling your banks use. Money to or from these names counts as moving your own funds, not income or spending."
@@ -129,7 +131,7 @@ export function IdentityPanel({ identity, currency, onChange, onCurrencyChange, 
             <select
               value={currency}
               onChange={(e) => onCurrencyChange(e.target.value)}
-              className="mt-2 block w-full cursor-pointer rounded-lg border border-line bg-paper px-3 py-2 text-[13.5px] normal-case tracking-normal text-ink"
+              className="mt-2 block w-full cursor-pointer border border-line bg-card px-3 py-2 text-[13px] normal-case tracking-normal text-ink"
             >
               {CURRENCY_CHOICES.map((c) => (
                 <option key={c} value={c}>

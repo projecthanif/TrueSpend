@@ -62,7 +62,12 @@ export function AnnualInflow({ data }: { data: Aggregates }) {
         {ticks.map((v) => (
           <g key={v}>
             <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--color-line)" strokeWidth={1} />
-            <text x={L - 16} y={y(v) + 5} textAnchor="end" className="fill-muted text-[14px]">
+            <text
+              x={L - 16}
+              y={y(v) + 5}
+              textAnchor="end"
+              className="fill-muted text-[22px] sm:text-[14px]"
+            >
               {v === 0 ? `${symbol}0` : short(v)}
             </text>
           </g>
@@ -84,14 +89,29 @@ export function AnnualInflow({ data }: { data: Aggregates }) {
               >
                 <title>{`${r.year}: ${full(r.total)}`}</title>
               </path>
-              <text x={cx} y={t - 14} textAnchor="middle" className="fill-ink text-[16px]">
+              <text
+                x={cx}
+                y={t - 14}
+                textAnchor="middle"
+                className="fill-ink text-[24px] sm:text-[16px]"
+              >
                 {short(r.total)}
               </text>
-              <text x={cx} y={base + 30} textAnchor="middle" className="fill-body text-[16px]">
+              <text
+                x={cx}
+                y={base + 30}
+                textAnchor="middle"
+                className="fill-body text-[24px] sm:text-[16px]"
+              >
                 {r.year}
               </text>
               {r.months < 12 && (
-                <text x={cx} y={base + 52} textAnchor="middle" className="fill-muted text-[13.5px]">
+                <text
+                  x={cx}
+                  y={base + 52}
+                  textAnchor="middle"
+                  className="fill-muted text-[20px] sm:text-[13.5px]"
+                >
                   {r.months} mo
                 </text>
               )}

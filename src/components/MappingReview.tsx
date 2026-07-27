@@ -92,10 +92,15 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
   const ok = hasDate && hasMoney && preview.total > 0
 
   return (
-    <div className="rise mx-auto w-full max-w-5xl">
-      <div className="rounded-3xl border border-line bg-card px-7 py-6">
-        <h2 className="text-[20px] font-bold tracking-tight text-ink">Check the columns</h2>
-        <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-body">
+    <div className="rise mx-auto mt-16 w-full max-w-6xl border-t border-line pt-8">
+      <div>
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-g3">
+          One quick check
+        </p>
+        <h2 className="text-[clamp(2.5rem,6vw,4.8rem)] font-medium leading-none tracking-[-0.05em] text-ink">
+          Check the columns.
+        </h2>
+        <p className="mt-4 max-w-2xl text-[14px] leading-6 text-body">
           <b>{fileName}</b> — {reason} Tell the app what each column holds; the preview below updates
           as you go.
         </p>
@@ -107,13 +112,14 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
                 {Array.from({ length: width }, (_, c) => (
                   <th key={c} className="min-w-[150px] align-top">
                     <select
+                      aria-label={`Column ${c + 1} role`}
                       value={roles[c] ?? 'ignore'}
                       onChange={(e) => setRole(c, e.target.value as ColumnRole)}
                       className={
-                        'w-full cursor-pointer rounded-lg border px-2.5 py-2 text-[13px] font-medium transition ' +
+                        'w-full cursor-pointer border px-2.5 py-2 text-[12px] font-medium transition-colors ' +
                         ((roles[c] ?? 'ignore') === 'ignore'
-                          ? 'border-line bg-paper text-muted'
-                          : 'border-p3 bg-p0 text-p5')
+                          ? 'border-line bg-card text-muted'
+                          : 'border-ink bg-ink text-card')
                       }
                     >
                       {ROLES.map((r) => (
@@ -137,7 +143,7 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
                   {Array.from({ length: width }, (_, c) => (
                     <td
                       key={c}
-                      className="max-w-[220px] truncate rounded-lg bg-paper px-2.5 py-1.5 text-[12.5px] text-body"
+                      className="max-w-[220px] truncate border-b border-line px-2.5 py-2 text-[12px] text-body"
                       title={row[c]}
                     >
                       {row[c] || <span className="text-muted">—</span>}
@@ -155,7 +161,7 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
             <select
               value={dateFormat}
               onChange={(e) => setDateFormat(e.target.value as DateFormat)}
-              className="cursor-pointer rounded-lg border border-line bg-paper px-2.5 py-1.5 text-[13px]"
+              className="cursor-pointer border border-line bg-card px-2.5 py-1.5 text-[12px]"
             >
               {FORMATS.map((f) => (
                 <option key={f.value} value={f.value}>
@@ -170,7 +176,7 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
         </div>
 
         {/* Live preview — the real test of whether the mapping is right. */}
-        <div className="mt-5 rounded-2xl border border-line bg-paper px-5 py-4">
+        <div className="mt-5 border-l-2 border-ink bg-card px-5 py-4">
           <div className="mb-3 text-[11.5px] uppercase tracking-[0.14em] text-muted">Preview</div>
           {ok ? (
             <ul className="space-y-1.5">
@@ -203,14 +209,14 @@ export function MappingReview({ fileName, table, map, reason, onConfirm, onCance
             type="button"
             disabled={!ok}
             onClick={() => onConfirm({ roles, dateFormat, confidence: 1, notes: [] })}
-            className="cursor-pointer rounded-xl bg-p5 px-5 py-2.5 text-[14px] font-semibold text-white transition hover:bg-p4 disabled:cursor-not-allowed disabled:bg-[#cfcbc4]"
+            className="cursor-pointer border border-ink bg-ink px-5 py-2.5 text-[13px] font-semibold text-card transition-colors hover:bg-p5 disabled:cursor-not-allowed disabled:border-line disabled:bg-line"
           >
             Use this mapping
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="cursor-pointer rounded-xl px-4 py-2.5 text-[13.5px] text-muted transition hover:text-body"
+            className="cursor-pointer px-4 py-2.5 text-[13px] text-muted transition-colors hover:text-ink"
           >
             Skip this file
           </button>

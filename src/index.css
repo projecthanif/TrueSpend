@@ -2,29 +2,29 @@
 
 @theme {
   /* surfaces */
-  --color-paper: #f4f2ed;
-  --color-card: #fbfaf7;
-  --color-line: #e8e5de;
-  --color-empty: #e5e3de;
+  --color-paper: #f6f6f2;
+  --color-card: #fcfcf9;
+  --color-line: #dcded8;
+  --color-empty: #e9ebe6;
 
   /* ink */
-  --color-ink: #111111;
-  --color-body: #6b6862;
-  --color-muted: #9a978f;
+  --color-ink: #151915;
+  --color-body: #5c625c;
+  --color-muted: #929890;
 
-  /* purple ramp — spending */
-  --color-p0: #efeaf9;
-  --color-p1: #dcd0f2;
-  --color-p2: #c0aae8;
-  --color-p3: #9d7ed9;
-  --color-p4: #7a53c4;
-  --color-p5: #5b2ea8;
+  /* graphite ramp — spending */
+  --color-p0: #edf0ec;
+  --color-p1: #d7dcd7;
+  --color-p2: #b2bbb4;
+  --color-p3: #7a887e;
+  --color-p4: #46564b;
+  --color-p5: #1e2c22;
 
-  /* green ramp — inflow */
-  --color-g0: #dfeae1;
-  --color-g1: #9cc0a4;
-  --color-g2: #6f9a79;
-  --color-g3: #39603f;
+  /* sage ramp — inflow and accent */
+  --color-g0: #edf3e8;
+  --color-g1: #cbdcbc;
+  --color-g2: #84a969;
+  --color-g3: #42672e;
 
   --font-sans:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter,
@@ -44,6 +44,19 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-g3);
+  outline-offset: 3px;
 }
 
 /* thin scrollbar for the horizontally-scrolling calendar */
@@ -73,5 +86,11 @@ body {
   }
 }
 .rise {
-  animation: rise 0.35s ease both;
+  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
 }

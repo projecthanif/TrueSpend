@@ -1,4 +1,4 @@
-# Statement
+# TrueSpend
 
 Turns **any** bank statement into the picture the bank never shows you: what
 actually came in, what actually went out, and the rhythm underneath it.
@@ -154,4 +154,3 @@ one silently corrupted the output before it was fixed:
   debit column look like prose and get ignored.
 - **Plurals matter.** `Lodgements` not matching a `lodgement` synonym made every
   credit in a GTBank-style file disappear.
-# TrueSpend

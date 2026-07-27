@@ -62,6 +62,7 @@ export function BalanceTrend({ data }: { data: Aggregates }) {
                 color: '#fff',
               }}
               labelStyle={{ color: '#cfcbc4' }}
+              itemStyle={{ color: '#fff' }}
               formatter={(v) => [full(Number(v)), 'Balance']}
             />
             <Area

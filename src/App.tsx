@@ -86,7 +86,8 @@ export default function App() {
   if (pending.length) {
     const item = pending[0]
     return (
-      <main className="mx-auto max-w-6xl px-7 py-12">
+      <main className="mx-auto min-h-screen max-w-7xl px-5 py-7 sm:px-8 sm:py-10">
+        <ProductMark />
         <MappingReview
           fileName={item.fileName}
           table={item.table}
@@ -102,18 +103,46 @@ export default function App() {
   // --- nothing loaded yet --------------------------------------------------
   if (!model) {
     return (
-      <main className="mx-auto max-w-5xl px-7 py-16">
-        <header className="mb-12 text-center">
-          <h1 className="text-[56px] font-extrabold leading-[1.03] tracking-[-0.03em] text-ink">
-            Statement
-          </h1>
-          <p className="mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-body">
-            Turn any bank statement into the picture your bank never shows you — what actually came
-            in, what actually went out, and the rhythm underneath it.
-          </p>
+      <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-7 sm:px-8 sm:py-10">
+        <header className="flex items-center justify-between border-b border-line pb-5">
+          <ProductMark />
+          <div className="flex items-center gap-2 text-[12px] font-medium text-body">
+            <span className="size-1.5 rounded-full bg-g3" />
+            Private by design
+          </div>
         </header>
-        <Upload onIngested={receive} />
-        <Failures items={failures} />
+
+        <div className="grid flex-1 items-center gap-12 py-14 lg:grid-cols-[0.95fr_1.05fr] lg:gap-20 lg:py-20">
+          <section>
+            <p className="mb-7 text-[11px] font-semibold uppercase tracking-[0.22em] text-g3">
+              Personal finance, clarified
+            </p>
+            <h1 className="max-w-2xl text-[clamp(3.75rem,8vw,7.4rem)] font-medium leading-[0.86] tracking-[-0.065em] text-ink">
+              Your money,
+              <span className="block text-body">made legible.</span>
+            </h1>
+            <p className="mt-8 max-w-lg text-[16px] leading-7 text-body sm:text-[18px]">
+              Turn scattered bank statements into one honest view of what came in, what went out,
+              and the patterns in between.
+            </p>
+            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-line pt-5 text-[12px] text-muted">
+              <span>PDF, Excel or CSV</span>
+              <span>Multiple accounts</span>
+              <span>No uploads. Ever.</span>
+            </div>
+          </section>
+
+          <section className="lg:pt-10">
+            <Upload onIngested={receive} />
+            <Failures items={failures} />
+          </section>
+        </div>
+
+        <footer className="flex items-center justify-between border-t border-line pt-5 text-[11px] uppercase tracking-[0.16em] text-muted">
+          <span>Annual flow</span>
+          <span>Spending rhythm</span>
+          <span>Balance trend</span>
+        </footer>
       </main>
     )
   }
@@ -125,30 +154,41 @@ export default function App() {
 
   return (
     <FormatProvider currency={active}>
-      <main className="mx-auto max-w-6xl px-7 py-12">
-        <header className="mb-8 flex flex-wrap items-end justify-between gap-5">
+      <main className="mx-auto min-h-screen max-w-7xl px-5 py-7 sm:px-8 sm:py-10">
+        <div className="mb-16 flex items-center justify-between border-b border-line pb-5">
+          <ProductMark />
+          <div className="flex items-center gap-2 text-[12px] text-muted">
+            <span className="size-1.5 rounded-full bg-g3" />
+            Processed locally
+          </div>
+        </div>
+
+        <header className="mb-10 flex flex-wrap items-end justify-between gap-7">
           <div>
-            <h1 className="text-[46px] font-extrabold leading-[1.03] tracking-[-0.03em] text-ink">
-              Statement
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-g3">
+              Financial overview
+            </p>
+            <h1 className="text-[clamp(2.8rem,6vw,5.5rem)] font-medium leading-[0.92] tracking-[-0.055em] text-ink">
+              The full picture.
             </h1>
-            <p className="mt-2 text-[14.5px] text-body">
+            <p className="mt-4 text-[14px] text-body">
               {statements.length} account{statements.length > 1 ? 's' : ''} ·{' '}
               {agg.coverage.first} to {agg.coverage.last}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <Upload onIngested={receive} compactMode />
             <button
               type="button"
               onClick={reset}
-              className="cursor-pointer rounded-xl px-3 py-2 text-[13.5px] text-muted transition hover:text-body"
+              className="cursor-pointer px-4 py-2.5 text-[12px] font-medium text-muted transition-colors hover:text-ink"
             >
               Start over
             </button>
           </div>
         </header>
 
-        <div className="mb-6">
+        <div className="mb-10">
           <IdentityPanel
             identity={identity!}
             currency={active}
@@ -158,7 +198,7 @@ export default function App() {
           />
         </div>
 
-        <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-20 grid border-y border-line sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Money in" value={fmt.full(agg.totals.inflow)} hint="external credits only" />
           <Stat label="Money out" value={fmt.full(agg.totals.spend)} hint="external debits only" />
           <Stat
@@ -173,7 +213,7 @@ export default function App() {
           />
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-24">
           <AnnualInflow data={agg} />
           <DailyRhythm data={agg} />
           <MonthlyRhythm data={agg} />
@@ -182,19 +222,19 @@ export default function App() {
         </div>
 
         {excluded.length > 0 && (
-          <section className="mt-8 rounded-3xl border border-line bg-card px-7 py-6">
-            <h2 className="text-[13px] font-semibold uppercase tracking-[0.18em] text-body">
+          <section className="mt-24 border-t border-line py-8">
+            <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-body">
               Deliberately excluded
             </h2>
             <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-muted">
               Counting these would inflate both income and spending — the same money appears several
               times as it moves between your own accounts.
             </p>
-            <ul className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
+            <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {excluded.map(([kind, amount]) => (
-                <li key={kind} className="text-[13.5px]">
-                  <b className="text-ink">{fmt.full(amount)}</b>{' '}
-                  <span className="text-body">{KIND_LABEL[kind] ?? kind}</span>
+                <li key={kind} className="text-[13px]">
+                  <b className="block text-[18px] font-medium text-ink">{fmt.full(amount)}</b>
+                  <span className="mt-1 block text-muted">{KIND_LABEL[kind] ?? kind}</span>
                 </li>
               ))}
             </ul>
@@ -218,12 +258,21 @@ export default function App() {
 function Failures({ items }: { items: Failed[] }) {
   if (!items.length) return null
   return (
-    <ul className="mx-auto mt-6 max-w-2xl space-y-1.5 rounded-2xl border border-[#e9c9c9] bg-[#fbf1f1] px-5 py-4 text-[13.5px] text-[#8f3b3b]">
+    <ul className="mt-5 space-y-1.5 border-l-2 border-[#a4493d] bg-[#f8efec] px-4 py-3 text-[13px] text-[#893b32]">
       {items.map((f) => (
         <li key={f.fileName}>
           <b>{f.fileName}</b> — {f.error}
         </li>
       ))}
     </ul>
+  )
+}
+
+function ProductMark() {
+  return (
+    <div className="flex items-center gap-3">
+      <img src="/favicon.svg" alt="" className="size-7" aria-hidden="true" />
+      <span className="text-[14px] font-semibold tracking-[-0.02em] text-ink">TrueSpend</span>
+    </div>
   )
 }

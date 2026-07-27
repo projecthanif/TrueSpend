@@ -143,7 +143,7 @@ export function DailyRhythm({ data }: { data: Aggregates }) {
                   return (
                     <td
                       key={w}
-                      className={`size-[15px] rounded-[4.5px] ${cls} ${outside ? '' : 'cursor-pointer hover:outline hover:outline-[1.5px] hover:outline-offset-[1px] hover:outline-p5'}`}
+                      className={`size-[15px] rounded-[2px] ${cls} ${outside ? '' : 'cursor-pointer hover:outline hover:outline-[1.5px] hover:outline-offset-[1px] hover:outline-p5'}`}
                       onMouseEnter={
                         outside
                           ? undefined

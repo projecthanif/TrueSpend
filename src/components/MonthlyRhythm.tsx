@@ -4,7 +4,14 @@ import { Card, Legend, Tooltip } from './ui'
 import { useFormat } from '../lib/format'
 
 const RAMP = ['bg-p0', 'bg-p1', 'bg-p2', 'bg-p3', 'bg-p4', 'bg-p5']
-const INK = ['text-[#4b3a6b]', 'text-[#4b3a6b]', 'text-[#4b3a6b]', 'text-white', 'text-white', 'text-white']
+const INK = [
+  'text-[#26332a]',
+  'text-[#26332a]',
+  'text-[#26332a]',
+  'text-white',
+  'text-white',
+  'text-white',
+]
 
 export function MonthlyRhythm({ data }: { data: Aggregates }) {
   const { full, short } = useFormat()
@@ -86,12 +93,12 @@ export function MonthlyRhythm({ data }: { data: Aggregates }) {
                   {MONTHS.map((_, mi) => {
                     const key = `${y}-${String(mi + 1).padStart(2, '0')}`
                     const cell = byKey.get(key)
-                    if (!cell) return <td key={key} className="h-[62px] rounded-[11px] bg-empty" />
+                    if (!cell) return <td key={key} className="h-[62px] rounded-[4px] bg-empty" />
                     const l = level(cell.amount)
                     return (
                       <td
                         key={key}
-                        className={`h-[62px] cursor-pointer rounded-[11px] text-center align-middle text-[13px] font-semibold transition hover:scale-105 ${RAMP[l]} ${INK[l]}`}
+                        className={`h-[62px] cursor-pointer rounded-[4px] text-center align-middle text-[13px] font-semibold transition-transform hover:scale-[1.03] ${RAMP[l]} ${INK[l]}`}
                         onMouseEnter={(e) => setHover({ x: e.clientX, y: e.clientY, key })}
                         onMouseMove={(e) => setHover({ x: e.clientX, y: e.clientY, key })}
                         onMouseLeave={() => setHover(null)}

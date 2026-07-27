@@ -45,7 +45,7 @@ function DownloadMenu({
   }
 
   const item =
-    'block w-full cursor-pointer px-4 py-2.5 text-left text-[13px] text-body transition hover:bg-p0 hover:text-p5'
+    'block w-full cursor-pointer px-4 py-2.5 text-left text-[12px] text-body transition-colors hover:bg-p0 hover:text-ink'
 
   return (
     <div ref={wrap} className="relative shrink-0" data-export-ignore>
@@ -54,7 +54,7 @@ function DownloadMenu({
         onClick={() => setOpen((v) => !v)}
         disabled={busy}
         aria-label={`Download ${name}`}
-        className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[12px] text-muted transition hover:border-p3 hover:text-p5 disabled:opacity-50"
+        className="flex cursor-pointer items-center gap-1.5 border-b border-transparent px-0 py-1 text-[11px] font-medium text-muted transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
       >
         <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 15V3m0 12-4-4m4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
@@ -64,7 +64,7 @@ function DownloadMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1.5 w-40 overflow-hidden rounded-xl border border-line bg-card py-1 shadow-[0_6px_20px_rgba(0,0,0,0.09)]">
+        <div className="absolute right-0 top-full z-20 mt-2 w-40 overflow-hidden border border-line bg-card py-1 shadow-[0_12px_30px_rgba(15,20,16,0.1)]">
           <button type="button" className={item} onClick={png}>
             PNG image
           </button>
@@ -108,17 +108,17 @@ export function Card({
   return (
     <section
       ref={card}
-      className="rise rounded-3xl border border-line bg-card px-7 py-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+      className="rise border-t border-line pt-8"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-[13px] font-semibold uppercase tracking-[0.18em] text-body">{title}</h2>
-          {subtitle && <p className="mt-1.5 text-[14px] text-muted">{subtitle}</p>}
+          <h2 className="text-[26px] font-medium tracking-[-0.035em] text-ink">{title}</h2>
+          {subtitle && <p className="mt-2 max-w-2xl text-[13px] leading-5 text-muted">{subtitle}</p>}
         </div>
         <DownloadMenu target={card} name={downloadName ?? title} csv={csv} />
       </div>
-      <div className="mt-6">{children}</div>
-      {footer && <div className="mt-6 border-t border-line pt-4 text-[13px] text-body">{footer}</div>}
+      <div className="mt-10">{children}</div>
+      {footer && <div className="mt-8 border-t border-line pt-5 text-[12px] text-body">{footer}</div>}
     </section>
   )
 }
@@ -133,17 +133,17 @@ export function Tabs<T extends string | number>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="inline-flex gap-1 rounded-2xl border border-line bg-card p-2">
+    <div className="inline-flex border-b border-line">
       {items.map((it) => (
         <button
           key={String(it)}
           type="button"
           onClick={() => onChange(it)}
           className={
-            'cursor-pointer rounded-xl px-5 py-2.5 text-[17px] transition ' +
+            'cursor-pointer border-b-2 px-4 py-2 text-[14px] transition-colors ' +
             (it === value
-              ? 'bg-p5 font-semibold text-white shadow-[0_1px_3px_rgba(91,46,168,0.35)]'
-              : 'font-medium text-[#a5a29a] hover:text-body')
+              ? 'border-ink font-semibold text-ink'
+              : 'border-transparent font-medium text-muted hover:text-body')
           }
         >
           {it}
@@ -158,7 +158,7 @@ export function Legend({ ramp, from = 'Less', to = 'More' }: { ramp: string[]; f
     <div className="flex items-center gap-1.5 text-[12.5px] text-muted">
       {from}
       {ramp.map((c) => (
-        <i key={c} className={`inline-block size-4 rounded-[5px] ${c}`} />
+        <i key={c} className={`inline-block size-3 ${c}`} />
       ))}
       {to}
     </div>
@@ -167,10 +167,10 @@ export function Legend({ ramp, from = 'Less', to = 'More' }: { ramp: string[]; f
 
 export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-card px-5 py-4">
-      <div className="text-[12px] uppercase tracking-[0.12em] text-muted">{label}</div>
-      <div className="mt-1.5 text-[26px] font-bold tracking-tight text-ink">{value}</div>
-      {hint && <div className="mt-0.5 text-[12.5px] text-muted">{hint}</div>}
+    <div className="border-b border-line px-0 py-6 last:border-b-0 sm:px-6 lg:border-r lg:border-b-0 lg:first:pl-0 lg:last:border-r-0">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.17em] text-muted">{label}</div>
+      <div className="mt-3 text-[clamp(1.6rem,3vw,2.15rem)] font-medium tracking-[-0.04em] text-ink">{value}</div>
+      {hint && <div className="mt-1 text-[11px] text-muted">{hint}</div>}
     </div>
   )
 }
