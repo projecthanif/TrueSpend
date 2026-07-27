@@ -154,3 +154,4 @@ one silently corrupted the output before it was fixed:
   debit column look like prose and get ignored.
 - **Plurals matter.** `Lodgements` not matching a `lodgement` synonym made every
   credit in a GTBank-style file disappear.
+# TrueSpend
