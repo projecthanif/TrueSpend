@@ -82,7 +82,16 @@ export function DailyRhythm({ data }: { data: Aggregates }) {
   return (
     <Card
       title="Spending rhythm"
+      // The visible year is what gets exported, matching what's on screen.
+      downloadName={`spending-rhythm-${year}`}
       subtitle="Every day of the year, shaded by how much left your accounts"
+      csv={() => [
+        ['Date', 'Spent', 'Transactions'],
+        ...yearCells
+          .slice()
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map((c) => [c.date, c.amount.toFixed(2), c.txns]),
+      ]}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-4">
           <span>

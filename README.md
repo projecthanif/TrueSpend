@@ -91,6 +91,22 @@ detected from each statement and shown in an editable **This is me** panel.
 Shade buckets are quantiles of your own data, not fixed thresholds, so a quiet
 year and a heavy year are both readable.
 
+## Downloads
+
+Every chart has a **Save** control offering:
+
+- **PNG** — the card exactly as rendered, at 2× for legibility in docs and
+  slides. The button and hover tooltip are excluded from the capture, and the
+  card background is baked in so the image isn't transparent when pasted.
+- **CSV** — the numbers behind that chart. The spending rhythm exports the year
+  currently on screen; "Where it goes" carries a `Section` column because it's
+  three tables in one card.
+
+CSV output is RFC 4180 escaped, which is not optional here: counterparty names
+come straight from bank narrations and contain commas (`HAIGHA & CO, LTD`),
+quotes and the occasional newline. Files are written with a UTF-8 BOM so Excel
+renders `₦` correctly instead of mangling it.
+
 ## Layout
 
 ```
@@ -108,6 +124,7 @@ src/
     aggregate.ts      derives every series the views render
     ingest.ts         one file in, one outcome out
     format.tsx        currency formatting context
+    export.ts         PNG capture + RFC 4180 CSV
   components/
     Upload.tsx  MappingReview.tsx  IdentityPanel.tsx
     AnnualInflow.tsx  DailyRhythm.tsx  MonthlyRhythm.tsx

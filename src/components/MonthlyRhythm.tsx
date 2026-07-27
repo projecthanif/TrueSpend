@@ -43,6 +43,10 @@ export function MonthlyRhythm({ data }: { data: Aggregates }) {
     <Card
       title="Monthly rhythm"
       subtitle="Every month side by side · shade and label show total outflow"
+      csv={() => [
+        ['Month', 'Spent', 'Transactions', 'Active days'],
+        ...data.monthly.map((m) => [m.key, m.amount.toFixed(2), m.txns, m.activeDays]),
+      ]}
       footer={
         <div className="flex flex-wrap items-center justify-between gap-4">
           <span>

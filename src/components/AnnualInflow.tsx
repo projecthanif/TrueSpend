@@ -39,6 +39,10 @@ export function AnnualInflow({ data }: { data: Aggregates }) {
     <Card
       title="Annual inflow"
       subtitle="Total money received in each calendar year · partial years show available months"
+      csv={() => [
+        ['Year', 'Inflow', 'Months covered'],
+        ...rows.map((r) => [r.year, r.total.toFixed(2), r.months]),
+      ]}
       footer={
         <>
           <b className="text-ink">{full(data.totals.inflow)}</b> received in total · best year{' '}

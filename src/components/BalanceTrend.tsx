@@ -16,6 +16,10 @@ export function BalanceTrend({ data }: { data: Aggregates }) {
     <Card
       title="Balance trend"
       subtitle="End-of-day balance on the account that reports one"
+      csv={() => [
+        ['Date', 'Balance'],
+        ...data.balance.map((p) => [p.date, p.balance.toFixed(2)]),
+      ]}
       footer={
         <>
           Peak <b className="text-ink">{full(highest.balance)}</b> on {highest.date} · low{' '}

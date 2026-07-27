@@ -64,6 +64,21 @@ export function Breakdown({ data }: { data: Aggregates }) {
     <Card
       title="Where it goes"
       subtitle="Outflow split by type, then ranked by who was on the other side"
+      /*
+       * Three different tables in one card, so the CSV carries a "Section"
+       * column rather than three separate files.
+       */
+      csv={() => [
+        ['Section', 'Name', 'Amount', 'Transactions'],
+        ...data.categories.map((c) => [
+          'Category',
+          LABEL[c.category],
+          c.amount.toFixed(2),
+          c.txns,
+        ]),
+        ...data.payees.map((p) => ['Recipient', p.name, p.amount.toFixed(2), p.txns]),
+        ...data.payers.map((p) => ['Sender', p.name, p.amount.toFixed(2), p.txns]),
+      ]}
     >
       <div className="mb-8">
         <div className="flex h-4 overflow-hidden rounded-full">
