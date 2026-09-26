@@ -4,9 +4,10 @@ import { CURRENCY_CHOICES } from '../lib/money'
 
 interface Props {
   identity: Identity
-  currency: string
+  /** Every loaded file, across all currencies. */
+  statements: { id: string; fileName: string; currency: string }[]
   onChange: (identity: Identity) => void
-  onCurrencyChange: (currency: string) => void
+  onStatementCurrency: (id: string, currency: string) => void
   selfTotal: string
   remember: boolean
   onRememberChange: (remember: boolean) => void
@@ -80,9 +81,9 @@ function Chips({
  */
 export function IdentityPanel({
   identity,
-  currency,
+  statements,
   onChange,
-  onCurrencyChange,
+  onStatementCurrency,
   selfTotal,
   remember,
   onRememberChange,
@@ -136,20 +137,37 @@ export function IdentityPanel({
               })
             }
           />
-          <label className="text-[12px] uppercase tracking-[0.12em] text-muted">
-            Currency
-            <select
-              value={currency}
-              onChange={(e) => onCurrencyChange(e.target.value)}
-              className="mt-2 block w-full cursor-pointer border border-line bg-card px-3 py-2 text-[13px] normal-case tracking-normal text-ink"
-            >
-              {CURRENCY_CHOICES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+<div>
+            <div className="text-[12px] uppercase tracking-[0.12em] text-muted">
+              Statement currency
+            </div>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
+              Read from each file. Correct it here if it's wrong. Different currencies are
+              never added together.
+            </p>
+            <ul className="mt-2.5 space-y-2">
+              {statements.map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate text-[12.5px] text-ink" title={s.fileName}>
+                    {s.fileName}
+                  </span>
+                  <select
+                    value={s.currency}
+                    onChange={(e) => onStatementCurrency(s.id, e.target.value)}
+                    aria-label={`Currency of ${s.fileName}`}
+                    className="shrink-0 cursor-pointer border border-line bg-card px-2 py-1 text-[12px] text-ink"
+                  >
+                    {/* Keep a detected value selectable even if it isn't in the list. */}
+                    {[...new Set([s.currency, ...CURRENCY_CHOICES])].sort().map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </li>
               ))}
-            </select>
-          </label>
+            </ul>
+          </div>
           <div>
             <label className="flex cursor-pointer items-start gap-3">
               <input

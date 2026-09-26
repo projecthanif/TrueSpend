@@ -9,9 +9,9 @@ import { MonthlyRhythm } from './components/MonthlyRhythm'
 import { Breakdown } from './components/Breakdown'
 import { BalanceTrend } from './components/BalanceTrend'
 import { Transactions } from './components/Transactions'
-import { Stat } from './components/ui'
+import { Stat, Tabs } from './components/ui'
 import { applyMapping, type Ingested } from './lib/ingest'
-import { classify, NO_OVERRIDES, suggestIdentity } from './lib/classify'
+import { classify, currencyGroups, NO_OVERRIDES, suggestIdentity } from './lib/classify'
 import { aggregate } from './lib/aggregate'
 import { FormatProvider } from './lib/format'
 import { makeFormatters } from './lib/money'
@@ -33,7 +33,8 @@ export default function App() {
   const [pending, setPending] = useState<Pending[]>([])
   const [failures, setFailures] = useState<Failed[]>([])
   const [identity, setIdentity] = useState<Identity | null>(null)
-  const [currency, setCurrency] = useState<string | null>(null)
+  /** Which currency's dashboard is on screen, when statements span several. */
+  const [view, setView] = useState<string | null>(null)
   // Opted in exactly when something is saved — switching off wipes storage.
   const [remember, setRemember] = useState(() => loadSaved() !== null)
   const [overrides, setOverrides] = useState<Overrides>(
@@ -57,7 +58,6 @@ export default function App() {
           }
         : suggested
     })
-    setCurrency((prev) => prev ?? statements[0].meta.currency)
   }, [statements])
 
   useEffect(() => {
@@ -69,11 +69,20 @@ export default function App() {
     if (!on) clearSaved()
   }
 
+  const groups = useMemo(() => currencyGroups(statements), [statements])
+  const shown = groups.find((g) => g.currency === view) ?? groups[0]
+
   const model = useMemo(() => {
-    if (!statements.length || !identity) return null
-    const classified = classify(statements, identity, overrides)
+    if (!shown || !identity) return null
+    const classified = classify(shown.statements, identity, overrides)
     return { classified, agg: aggregate(classified) }
-  }, [statements, identity, overrides])
+  }, [shown, identity, overrides])
+
+  /** Detection can misread a currency; fixing it moves the file to its group. */
+  const setStatementCurrency = (id: string, currency: string) =>
+    setStatements((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, meta: { ...s.meta, currency } } : s)),
+    )
 
   const receive = (results: Ingested[]) => {
     setStatements((prev) => {
@@ -106,7 +115,7 @@ export default function App() {
     setPending([])
     setFailures([])
     setIdentity(null)
-    setCurrency(null)
+    setView(null)
     // Start over clears the session, not what the user chose to remember.
     setOverrides(loadSaved()?.overrides ?? NO_OVERRIDES)
   }
@@ -184,8 +193,9 @@ export default function App() {
 
   const { classified, agg } = model
   const excluded = Object.entries(classified.excluded).filter(([k, v]) => k !== 'external' && v > 0)
-  const active = currency ?? classified.currency
+  const active = shown.currency
   const fmt = makeFormatters(active)
+  const accounts = shown.statements.length
 
   return (
     <FormatProvider currency={active}>
@@ -207,7 +217,7 @@ export default function App() {
               The full picture.
             </h1>
             <p className="mt-4 text-[14px] text-body">
-              {statements.length} account{statements.length > 1 ? 's' : ''} ·{' '}
+              {accounts} {groups.length > 1 && `${active} `}account{accounts > 1 ? 's' : ''} ·{' '}
               {agg.coverage.first} to {agg.coverage.last}
             </p>
           </div>
@@ -223,12 +233,27 @@ export default function App() {
           </div>
         </header>
 
+        {groups.length > 1 && (
+          <div className="mb-10 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <Tabs items={groups.map((g) => g.currency)} value={active} onChange={setView} />
+            <p className="max-w-md text-[12.5px] leading-relaxed text-muted">
+              Your statements use {groups.length} currencies. Each has its own totals: adding
+              them together would need an exchange rate for every day, and this app never goes
+              online to fetch one.
+            </p>
+          </div>
+        )}
+
         <div className="mb-10">
           <IdentityPanel
             identity={identity!}
-            currency={active}
+            statements={statements.map((s) => ({
+              id: s.id,
+              fileName: s.fileName,
+              currency: s.meta.currency,
+            }))}
             onChange={setIdentity}
-            onCurrencyChange={setCurrency}
+            onStatementCurrency={setStatementCurrency}
             remember={remember}
             onRememberChange={toggleRemember}
             selfTotal={fmt.full(classified.excluded.self)}

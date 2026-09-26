@@ -36,7 +36,7 @@ Handled automatically:
 - `DD/MM/YYYY`, `MM/DD/YYYY`, `YYYY-MM-DD`, `10 May 2023`, `05-Jan-2026`
 - `1,234.56` and `1.234,56`, `(1,234.56)` and `1,234.56 DR` for negatives
 - `--`, `-`, `N/A`, `nil` as empty cells
-- Currency from the statement (₦, $, £, €, ISO codes), overridable
+- Currency from the statement (₦, $, £, €, ISO codes), correctable per file
 
 ### When it isn't sure
 
@@ -96,6 +96,18 @@ detected from each statement and shown in an editable **This is me** panel.
 - `NIP/GTB/YAHAYA ADELEKE/NIP Transfer to MUSTAPHA IBRAHIM` contains your name —
   as the *beneficiary*. An `FRM` segment always wins, and a `to …` clause is
   only read when no earlier segment names someone else.
+
+## More than one currency
+
+Amounts in different currencies are **never added together**. Converting would
+need an exchange rate for every transaction date, which means fetching one, and
+the app never goes online with anything you give it. So when your statements
+span currencies, the dashboard gets a switcher and each currency has its own
+totals, charts and transaction list.
+
+Currency is read from each file. If one is misread, correct it for that file in
+*This is me* and it moves into the right group. (The old single currency picker
+only changed the symbol, so ₦500,000 + $1,000 showed as "₦501,000".)
 
 ## Remembering
 

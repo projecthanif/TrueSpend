@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classify, makeSelfMatcher } from '../src/lib/classify'
+import { classify, currencyGroups, makeSelfMatcher } from '../src/lib/classify'
 import { aggregate } from '../src/lib/aggregate'
 import type { Identity, Statement, Txn } from '../src/lib/types'
 
@@ -7,7 +7,7 @@ const ME: Identity = { names: ['MUSTAPHA IBRAHIM'], accountNumbers: ['0123456789
 
 type Row = [date: string, direction: 'in' | 'out', amount: number, description: string, counterparty?: string]
 
-function statement(id: string, rows: Row[], accountNumber = '0123456789'): Statement {
+function statement(id: string, rows: Row[], accountNumber = '0123456789', currency = 'NGN'): Statement {
   const txns: Txn[] = rows.map(([date, direction, amount, description, counterparty = ''], i) => ({
     id: `${id}:${i}`,
     date,
@@ -22,7 +22,7 @@ function statement(id: string, rows: Row[], accountNumber = '0123456789'): State
   return {
     id,
     fileName: `${id}.csv`,
-    meta: { accountNumber, currency: 'NGN' },
+    meta: { accountNumber, currency },
     map: { roles: [], dateFormat: null, confidence: 1, notes: [] },
     table: { headerIndex: -1, rows: [], preamble: [] },
     txns,
@@ -154,5 +154,34 @@ describe('self matcher', () => {
   it('treats only a different account of yours as conclusive', () => {
     expect(isSelf('MTN', 'Airtime | 0123456789 | MTN', '0123456789')).toBe(false)
     expect(isSelf('Someone', 'TRF 9876543210', '0123456789')).toBe(true)
+  })
+})
+
+describe('currencies', () => {
+  const ngn = statement('a', [
+    ['2025-01-01', 'in', 500_000, 'SALARY'],
+    ['2025-01-02', 'out', 1_000, 'AIRTIME'],
+  ])
+  const ngn2 = statement('b', [['2025-01-03', 'in', 20_000, 'GIFT']], '222222222')
+  const usd = statement('c', [['2025-01-01', 'in', 1_000, 'PAYPAL PAYOUT']], '333333333', 'USD')
+
+  it('groups statements by currency, largest first', () => {
+    const groups = currencyGroups([usd, ngn, ngn2])
+    expect(groups.map((g) => [g.currency, g.statements.map((s) => s.id), g.txns])).toEqual([
+      ['NGN', ['a', 'b'], 3],
+      ['USD', ['c'], 1],
+    ])
+  })
+
+  it('never adds one currency to another', () => {
+    const [naira, dollars] = currencyGroups([ngn, ngn2, usd]).map((g) =>
+      aggregate(classify(g.statements, ME)).totals.inflow,
+    )
+    expect(naira).toBe(520_000)
+    expect(dollars).toBe(1_000)
+  })
+
+  it('still warns if mixed statements are classified together', () => {
+    expect(classify([ngn, usd], ME).warnings.some((w) => w.includes('different currencies'))).toBe(true)
   })
 })

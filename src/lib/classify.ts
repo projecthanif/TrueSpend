@@ -123,6 +123,31 @@ export interface Classified {
 
 export const NO_OVERRIDES: Overrides = { byTxn: {}, byCounterparty: {} }
 
+export interface CurrencyGroup {
+  currency: string
+  statements: Statement[]
+  txns: number
+}
+
+/**
+ * Statements split by currency, largest first.
+ *
+ * Amounts in different currencies are never added together. Converting would
+ * need a rate for every transaction date, which means fetching one — and the
+ * app promises never to go online with anything the user gives it. So each
+ * currency gets its own dashboard instead of one wrong total.
+ */
+export function currencyGroups(statements: Statement[]): CurrencyGroup[] {
+  const m = new Map<string, CurrencyGroup>()
+  for (const s of statements) {
+    const g = m.get(s.meta.currency) ?? { currency: s.meta.currency, statements: [], txns: 0 }
+    g.statements.push(s)
+    g.txns += s.txns.length
+    m.set(s.meta.currency, g)
+  }
+  return [...m.values()].sort((a, b) => b.txns - a.txns || a.currency.localeCompare(b.currency))
+}
+
 const DAY = 86_400_000
 const daysBetween = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / DAY
 
@@ -262,7 +287,7 @@ export function classify(
     )
   if (currencies.length > 1)
     warnings.push(
-      `Statements use different currencies (${currencies.join(', ')}). Totals mix them — set a single currency to compare like with like.`,
+      `Statements use different currencies (${currencies.join(', ')}) and these totals add them together. Classify one currency at a time — see currencyGroups().`,
     )
 
   return {
