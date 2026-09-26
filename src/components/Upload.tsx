@@ -7,7 +7,18 @@ interface Props {
   compactMode?: boolean
 }
 
-const ACCEPT = '.pdf,.xlsx,.xls,.xlsm,.csv,.tsv'
+/*
+ * Extensions alone grey out valid files in some mobile pickers (Android
+ * providers match on MIME type), so list both.
+ */
+const ACCEPT = [
+  '.pdf,.xlsx,.xls,.xlsm,.csv,.tsv',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'text/csv',
+  'text/tab-separated-values',
+].join(',')
 
 /** "2 of 3 · statement.pdf · page 14 of 40", dropping the parts that add nothing. */
 function describe(p: UploadProgress) {

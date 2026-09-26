@@ -18,8 +18,30 @@ export type OnProgress = (p: { page: number; pages: number }) => void
 let counter = 0
 const nextId = () => globalThis.crypto?.randomUUID?.() ?? `src-${Date.now().toString(36)}-${++counter}`
 
+const BY_MIME: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.ms-excel.sheet.macroenabled.12': 'xlsm',
+  'text/csv': 'csv',
+  'text/comma-separated-values': 'csv',
+  'text/tab-separated-values': 'tsv',
+  'text/plain': 'txt',
+}
+const KNOWN = new Set(Object.values(BY_MIME))
+
+/**
+ * Mobile pickers (Android's Drive and Downloads providers especially) can hand
+ * over a file whose name has no extension, so fall back to its MIME type.
+ */
+function fileKind(file: File): string {
+  const name = file.name.toLowerCase()
+  const ext = name.includes('.') ? name.split('.').pop()! : ''
+  return KNOWN.has(ext) ? ext : (BY_MIME[file.type.toLowerCase()] ?? ext)
+}
+
 async function extract(file: File, onProgress?: OnProgress): Promise<RawTable> {
-  const ext = file.name.toLowerCase().split('.').pop() ?? ''
+  const ext = fileKind(file)
   /*
    * Loaded on demand: pdf.js and SheetJS are most of the app's weight, and
    * normally only the parsing worker ever needs them.
@@ -28,7 +50,7 @@ async function extract(file: File, onProgress?: OnProgress): Promise<RawTable> {
     const { extractPdf } = await import('./extractPdf')
     return extractPdf(file, (page, pages) => onProgress?.({ page, pages }))
   }
-  if (['xlsx', 'xls', 'xlsm', 'csv', 'tsv', 'txt'].includes(ext)) {
+  if (KNOWN.has(ext)) {
     const { extractTable } = await import('./extractTable')
     return extractTable(file)
   }

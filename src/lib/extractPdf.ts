@@ -1,10 +1,21 @@
-import * as pdfjs from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+/*
+ * The legacy build, not the default one: pdf.js 6's default build calls
+ * `Map.prototype.getOrInsertComputed` and `Math.sumPrecise` unpolyfilled, which
+ * only the newest desktop browsers have — on iOS Safari and most Android Chrome
+ * versions every PDF failed. The legacy build ships the polyfills, bar one.
+ */
+import './polyfills'
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
+/*
+ * This module runs inside the parsing worker, where pdf.js can't start a worker
+ * of its own (it needs `window`) and runs its handler in-thread instead. Loading
+ * that handler here — it registers itself as `globalThis.pdfjsWorker` — means
+ * the polyfill above applies to it, and there's no second file to fetch.
+ */
+import 'pdfjs-dist/legacy/build/pdf.worker.mjs'
 import type { RawTable } from './types'
 import { looksLikeDate, parseDate } from './dates'
 import { looksNumeric } from './money'
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
 interface Item {
   x: number

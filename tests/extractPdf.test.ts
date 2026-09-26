@@ -1,19 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
-
-/*
- * pdf.js's default build needs Node 22 (`Iterator`, `Promise.withResolvers`);
- * the legacy build runs anywhere. The browser still gets the modern one.
- */
-;(Promise as unknown as { withResolvers?: unknown }).withResolvers ??= () => {
-  let resolve!: (v: unknown) => void
-  let reject!: (e: unknown) => void
-  const promise = new Promise((a, b) => ((resolve = a), (reject = b)))
-  return { promise, resolve, reject }
-}
-vi.mock('pdfjs-dist', async () => await import('pdfjs-dist/legacy/build/pdf.mjs'))
-vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({
-  default: new URL('../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs', import.meta.url).href,
-}))
+import { describe, expect, it } from 'vitest'
 
 const { extractPdf } = await import('../src/lib/extractPdf')
 const { detectColumns } = await import('../src/lib/detectColumns')
