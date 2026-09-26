@@ -9,6 +9,7 @@ import { MonthlyRhythm } from './components/MonthlyRhythm'
 import { Breakdown } from './components/Breakdown'
 import { BalanceTrend } from './components/BalanceTrend'
 import { Transactions } from './components/Transactions'
+import { Roast } from './components/Roast'
 import { Stat, Tabs } from './components/ui'
 import { applyMapping, type Ingested } from './lib/ingest'
 import { classify, currencyGroups, NO_OVERRIDES, suggestIdentity } from './lib/classify'
@@ -281,6 +282,7 @@ export default function App() {
           <MonthlyRhythm data={agg} />
           <Breakdown data={agg} />
           <BalanceTrend data={agg} />
+          <Roast classified={classified} data={agg} />
           <Transactions data={classified} overrides={overrides} onChange={setOverrides} />
         </div>
 
