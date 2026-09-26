@@ -2,6 +2,7 @@ import type { ColumnMap, RawTable, Statement, StatementMeta, Txn } from './types
 import { parseDate } from './dates'
 import { detectCurrency, parseAmount } from './money'
 import { extractCounterparty } from './counterparty'
+import { txnKey } from './storage'
 
 /** Words that mean money left the account, for single-amount-column layouts. */
 const OUTBOUND = /\b(to|payment|purchase|pos|withdraw|withdrawal|debit|charge|fee|bill|airtime|data|transfer to|sent)\b/i
@@ -27,6 +28,9 @@ export function buildStatement(
 
   const txns: Txn[] = []
   let skipped = 0
+  // Without an account number the file is the best available account identity.
+  const account = meta.accountNumber || fileName
+  const occurrences = new Map<string, number>()
 
   for (const row of table.rows.slice(table.headerIndex + 1)) {
     if (!row.some(Boolean)) continue
@@ -74,8 +78,12 @@ export function buildStatement(
 
     if (amount === null || !direction) continue
 
+    const base = [date, direction, amount.toFixed(2), description].join('|')
+    const occurrence = (occurrences.get(base) ?? 0) + 1
+    occurrences.set(base, occurrence)
+
     txns.push({
-      id: `${id}:${txns.length}`,
+      id: txnKey(account, { date, direction, amount, description }, occurrence),
       date,
       sourceId: id,
       direction,

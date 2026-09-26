@@ -15,6 +15,7 @@ import { classify, NO_OVERRIDES, suggestIdentity } from './lib/classify'
 import { aggregate } from './lib/aggregate'
 import { FormatProvider } from './lib/format'
 import { makeFormatters } from './lib/money'
+import { clearSaved, loadSaved, save } from './lib/storage'
 import type { ColumnMap, Identity, Overrides, Statement } from './lib/types'
 
 type Pending = Extract<Ingested, { status: 'review' }>
@@ -33,7 +34,11 @@ export default function App() {
   const [failures, setFailures] = useState<Failed[]>([])
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [currency, setCurrency] = useState<string | null>(null)
-  const [overrides, setOverrides] = useState<Overrides>(NO_OVERRIDES)
+  // Opted in exactly when something is saved — switching off wipes storage.
+  const [remember, setRemember] = useState(() => loadSaved() !== null)
+  const [overrides, setOverrides] = useState<Overrides>(
+    () => loadSaved()?.overrides ?? NO_OVERRIDES,
+  )
 
   /*
    * Identity is seeded from the statements but stays user-owned afterwards, so
@@ -42,16 +47,27 @@ export default function App() {
   useEffect(() => {
     if (!statements.length) return
     const suggested = suggestIdentity(statements)
-    setIdentity((prev) =>
-      prev
+    setIdentity((prev) => {
+      // A remembered identity from an earlier visit counts as prior edits.
+      const base = prev ?? loadSaved()?.identity
+      return base
         ? {
-            names: [...new Set([...prev.names, ...suggested.names])],
-            accountNumbers: [...new Set([...prev.accountNumbers, ...suggested.accountNumbers])],
+            names: [...new Set([...base.names, ...suggested.names])],
+            accountNumbers: [...new Set([...base.accountNumbers, ...suggested.accountNumbers])],
           }
-        : suggested,
-    )
+        : suggested
+    })
     setCurrency((prev) => prev ?? statements[0].meta.currency)
   }, [statements])
+
+  useEffect(() => {
+    if (remember && identity) save({ identity, overrides })
+  }, [remember, identity, overrides])
+
+  const toggleRemember = (on: boolean) => {
+    setRemember(on)
+    if (!on) clearSaved()
+  }
 
   const model = useMemo(() => {
     if (!statements.length || !identity) return null
@@ -91,7 +107,8 @@ export default function App() {
     setFailures([])
     setIdentity(null)
     setCurrency(null)
-    setOverrides(NO_OVERRIDES)
+    // Start over clears the session, not what the user chose to remember.
+    setOverrides(loadSaved()?.overrides ?? NO_OVERRIDES)
   }
 
   // --- a file needs its columns confirmed ---------------------------------
@@ -177,7 +194,7 @@ export default function App() {
           <ProductMark />
           <div className="flex items-center gap-2 text-[12px] text-muted">
             <span className="size-1.5 rounded-full bg-g3" />
-            Processed locally
+            {remember ? 'Processed locally · settings remembered' : 'Processed locally'}
           </div>
         </div>
 
@@ -212,6 +229,8 @@ export default function App() {
             currency={active}
             onChange={setIdentity}
             onCurrencyChange={setCurrency}
+            remember={remember}
+            onRememberChange={toggleRemember}
             selfTotal={fmt.full(classified.excluded.self)}
           />
         </div>

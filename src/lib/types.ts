@@ -19,7 +19,7 @@ export type Category =
   | 'other'
 
 export interface Txn {
-  /** Stable within a session — `<sourceId>:<row>`. Overrides are keyed on it. */
+  /** Hash of account + row content — stable across sessions. Overrides key on it. */
   id: string
   /** ISO date, `YYYY-MM-DD`. */
   date: string

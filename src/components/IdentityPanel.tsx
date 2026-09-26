@@ -8,6 +8,8 @@ interface Props {
   onChange: (identity: Identity) => void
   onCurrencyChange: (currency: string) => void
   selfTotal: string
+  remember: boolean
+  onRememberChange: (remember: boolean) => void
 }
 
 function Chips({
@@ -76,7 +78,15 @@ function Chips({
  * wrong one, and it hinges on knowing who the user is. Detection gets it right
  * most of the time; this panel is how it gets corrected the rest of the time.
  */
-export function IdentityPanel({ identity, currency, onChange, onCurrencyChange, selfTotal }: Props) {
+export function IdentityPanel({
+  identity,
+  currency,
+  onChange,
+  onCurrencyChange,
+  selfTotal,
+  remember,
+  onRememberChange,
+}: Props) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -140,6 +150,25 @@ export function IdentityPanel({ identity, currency, onChange, onCurrencyChange, 
               ))}
             </select>
           </label>
+          <div>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => onRememberChange(e.target.checked)}
+                className="mt-0.5 size-4 cursor-pointer accent-[var(--color-g3)]"
+              />
+              <span>
+                <span className="block text-[12px] uppercase tracking-[0.12em] text-muted">
+                  Remember on this device
+                </span>
+                <span className="mt-1 block text-[12.5px] leading-relaxed text-muted">
+                  Keeps your names, account numbers and corrections in this browser for next
+                  time. Statements are never stored. Turning this off deletes what was saved.
+                </span>
+              </span>
+            </label>
+          </div>
         </div>
       )}
     </section>

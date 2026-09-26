@@ -4,7 +4,8 @@ Turns **any** bank statement into the picture the bank never shows you: what
 actually came in, what actually went out, and the rhythm underneath it.
 
 Everything is parsed **in the browser**. No file is uploaded anywhere, there is
-no backend, and nothing is stored.
+no backend, and statements are never stored. Your names and corrections can be
+remembered on your device if you opt in — see [Remembering](#remembering).
 
 ```bash
 npm install
@@ -96,6 +97,24 @@ detected from each statement and shown in an editable **This is me** panel.
   as the *beneficiary*. An `FRM` segment always wins, and a `to …` clause is
   only read when no earlier segment names someone else.
 
+## Remembering
+
+Off by default. **Remember on this device** in the *This is me* panel keeps
+your name spellings, account numbers and transaction corrections in
+`localStorage`, so the next visit starts where you left off.
+
+- **No statement content is saved.** A per-row correction is keyed by a hash
+  of the row's account, date, direction, amount and description, so storage
+  holds opaque keys like `21tow8qr03e`, never the row itself. Counterparty
+  rules are stored by name, because that name is what the rule is.
+- The same hash makes a correction stick when you re-upload the file, or a
+  different statement that overlaps it.
+- Turning it off deletes what was saved. **Start over** clears the session but
+  keeps what you chose to remember.
+- Storage is treated as untrusted on load (unknown kinds and malformed entries
+  are dropped), and a private window or blocked storage just means nothing is
+  remembered.
+
 ## Views
 
 - **Annual inflow** — external credits per calendar year, partial years labelled
@@ -143,6 +162,7 @@ src/
     classify.ts       self / internal / fee / reversal tagging
     aggregate.ts      derives every series the views render
     labels.ts         display names for kinds and categories
+    storage.ts        opt-in remembered settings + stable row keys
     ingest.ts         one file in, one outcome out
     format.tsx        currency formatting context
     export.ts         PNG capture + RFC 4180 CSV
