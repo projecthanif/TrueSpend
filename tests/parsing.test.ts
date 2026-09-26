@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { detectCurrency, parseAmount } from '../src/lib/money'
-import { parseDate } from '../src/lib/dates'
+import { detectCurrency, makeFormatters, parseAmount } from '../src/lib/money'
+import { detectDateFormat, parseDate } from '../src/lib/dates'
 import { toCsv } from '../src/lib/export'
 
 // Regressions from the README's "extraction gotchas" — each one silently
@@ -32,6 +32,14 @@ describe('parseDate', () => {
   })
 })
 
+describe('detectDateFormat', () => {
+  it('is confident when every month is named', () =>
+    expect(detectDateFormat(['10 May 2023', '03 Apr 2024'])).toEqual({ format: 'DMY', confident: true }))
+
+  it('still flags numeric dates that could go either way', () =>
+    expect(detectDateFormat(['03/04/2025', '05/06/2025']).confident).toBe(false))
+})
+
 describe('toCsv', () => {
   it('escapes commas, quotes and newlines in narrations', () => {
     const csv = toCsv([['HAIGHA & CO, LTD', 'say "hi"', 'a\nb']])
@@ -50,5 +58,21 @@ describe('detectCurrency', () => {
     expect(detectCurrency('Balance R 1,200.00')).toBe('ZAR')
     expect(detectCurrency('Closing KSh1,200')).toBe('KES')
     expect(detectCurrency('Total ₦5,000 USD')).toBe('USD')
+  })
+})
+
+describe('formatters', () => {
+  const { full, short } = makeFormatters('NGN')
+
+  it('puts the sign before the symbol', () => {
+    expect(full(-118479)).toBe('−₦118,479')
+    expect(short(-200000)).toBe('−₦200k')
+    expect(short(-2_500_000)).toBe('−₦2.50m')
+  })
+
+  it('leaves positives and zero unsigned', () => {
+    expect(full(355383)).toBe('₦355,383')
+    expect(full(-0.4)).toBe('₦0')
+    expect(short(950)).toBe('₦950')
   })
 })

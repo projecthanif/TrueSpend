@@ -37,7 +37,7 @@ export function detectColumns(table: RawTable): ColumnMap {
     return { roles: [], dateFormat: null, confidence: 0, notes: ['No data rows found.'] }
 
   const sample = body.slice(0, 400)
-  const notes: string[] = []
+  const notes: string[] = [...(table.notes ?? [])]
 
   // --- per-column content profile ----------------------------------------
   const profile = Array.from({ length: width }, (_, c) => {

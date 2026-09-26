@@ -145,12 +145,16 @@ function detectMeta(table: RawTable): StatementMeta {
       .replace(/[\s:,-]+$/, '')
       .trim() || undefined
 
+  const stacked = stackedNameAndNumber(table.preamble)
+
   const name = trimBoilerplate(
-    grab(/account\s*name\s*[:\-]?\s*\n?([A-Za-z][A-Za-z .'-]{3,60})/i) ??
+    stacked?.name ??
+      grab(/account\s*name\s*[:\-]?\s*\n?([A-Za-z][A-Za-z .'-]{3,60})/i) ??
       grab(/^\s*(?:name|customer)\s*[:\-]\s*([A-Za-z][A-Za-z .'-]{3,60})/im),
   )
 
   const number =
+    stacked?.number ??
     grab(/account\s*(?:number|no\.?|#)\s*[:\-]?\s*\n?([\d-]{6,20})/i) ??
     grab(/\ba\/c\s*(?:no\.?)?\s*[:\-]?\s*([\d-]{6,20})/i)
 
@@ -162,4 +166,30 @@ function detectMeta(table: RawTable): StatementMeta {
     bank,
     currency: detectCurrency(text) ?? 'NGN',
   }
+}
+
+/**
+ * OPay sets both labels on one row and both values on the row below:
+ *
+ *   Account Name        Account Number
+ *   JANE ADA DOE        0123456789
+ *
+ * The labelled-value patterns can't read that — "Account Number" is what
+ * follows "Account Name" — so the owner went undetected, and with them every
+ * transfer between their own accounts.
+ */
+function stackedNameAndNumber(preamble: string[]) {
+  for (let i = 0; i + 1 < preamble.length; i++) {
+    const labels = /^\s*account\s*(name|number|no\.?)\s+account\s*(name|number|no\.?)\s*$/i.exec(preamble[i])
+    if (!labels) continue
+    const nameFirst = /name/i.test(labels[1])
+    const values = nameFirst
+      ? /^\s*([A-Za-z][A-Za-z .'-]{2,60}?)\s+(\d[\d-]{5,19})\s*$/.exec(preamble[i + 1])
+      : /^\s*(\d[\d-]{5,19})\s+([A-Za-z][A-Za-z .'-]{2,60}?)\s*$/.exec(preamble[i + 1])
+    if (values)
+      return nameFirst
+        ? { name: values[1], number: values[2] }
+        : { name: values[2], number: values[1] }
+  }
+  return undefined
 }

@@ -1,6 +1,4 @@
 import type { ColumnMap, RawTable, Statement } from './types'
-import { extractPdf } from './extractPdf'
-import { extractTable } from './extractTable'
 import { CONFIDENCE_FLOOR, detectColumns } from './detectColumns'
 import { buildStatement } from './buildStatement'
 
@@ -10,13 +8,30 @@ export type Ingested =
   | { status: 'review'; id: string; fileName: string; table: RawTable; map: ColumnMap; reason: string }
   | { status: 'failed'; fileName: string; error: string }
 
-let counter = 0
-const nextId = () => `src-${++counter}`
+/** Progress within one file. Only PDFs report it — they're the slow ones. */
+export type OnProgress = (p: { page: number; pages: number }) => void
 
-async function extract(file: File): Promise<RawTable> {
+/*
+ * Parsing runs in a worker with its own module scope, so a per-module counter
+ * would hand out ids the main thread has already used.
+ */
+let counter = 0
+const nextId = () => globalThis.crypto?.randomUUID?.() ?? `src-${Date.now().toString(36)}-${++counter}`
+
+async function extract(file: File, onProgress?: OnProgress): Promise<RawTable> {
   const ext = file.name.toLowerCase().split('.').pop() ?? ''
-  if (ext === 'pdf') return extractPdf(file)
-  if (['xlsx', 'xls', 'xlsm', 'csv', 'tsv', 'txt'].includes(ext)) return extractTable(file)
+  /*
+   * Loaded on demand: pdf.js and SheetJS are most of the app's weight, and
+   * normally only the parsing worker ever needs them.
+   */
+  if (ext === 'pdf') {
+    const { extractPdf } = await import('./extractPdf')
+    return extractPdf(file, (page, pages) => onProgress?.({ page, pages }))
+  }
+  if (['xlsx', 'xls', 'xlsm', 'csv', 'tsv', 'txt'].includes(ext)) {
+    const { extractTable } = await import('./extractTable')
+    return extractTable(file)
+  }
   throw new Error(`Unsupported file type “.${ext}”. Upload a PDF, XLSX or CSV statement.`)
 }
 
@@ -25,10 +40,10 @@ async function extract(file: File): Promise<RawTable> {
  * is a fallback, not a failure — it's what makes an unfamiliar bank workable
  * rather than a dead end.
  */
-export async function ingest(file: File): Promise<Ingested> {
+export async function ingest(file: File, onProgress?: OnProgress): Promise<Ingested> {
   const id = nextId()
   try {
-    const table = await extract(file)
+    const table = await extract(file, onProgress)
     const map = detectColumns(table)
 
     if (map.confidence < CONFIDENCE_FLOOR) {

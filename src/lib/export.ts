@@ -1,5 +1,3 @@
-import { toPng } from 'html-to-image'
-
 /** A chart's underlying numbers: a header row followed by data rows. */
 export type CsvData = (string | number)[][]
 
@@ -51,6 +49,8 @@ export async function downloadPng(element: HTMLElement, name: string) {
   const background =
     getComputedStyle(element).getPropertyValue('--color-card').trim() || '#fbfaf7'
 
+  // Only needed when someone actually saves a picture, so it loads on demand.
+  const { toPng } = await import('html-to-image')
   const dataUrl = await toPng(element, {
     backgroundColor: background,
     pixelRatio: 2, // legible when scaled down in a doc or slide

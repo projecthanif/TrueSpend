@@ -76,6 +76,7 @@ export function detectDateFormat(values: unknown[]): { format: DateFormat; confi
   let dmy = 0
   let mdy = 0
   let ymd = 0
+  let numeric = 0
 
   for (const v of values) {
     const s = String(v ?? '').trim()
@@ -85,6 +86,7 @@ export function detectDateFormat(values: unknown[]): { format: DateFormat; confi
     }
     const num = /^(\d{1,2})[-/.](\d{1,2})[-/.]\d{2,4}/.exec(s)
     if (!num) continue
+    numeric++
     const a = Number(num[1])
     const b = Number(num[2])
     if (a > 12 && b <= 12) dmy++
@@ -92,6 +94,8 @@ export function detectDateFormat(values: unknown[]): { format: DateFormat; confi
   }
 
   if (ymd > dmy && ymd > mdy) return { format: 'YMD', confident: true }
+  // "10 May 2023" names its month — with no a/b/y dates there's nothing to guess.
+  if (numeric === 0) return { format: 'DMY', confident: true }
   if (dmy === 0 && mdy === 0) return { format: 'DMY', confident: false } // no evidence either way
   return dmy >= mdy ? { format: 'DMY', confident: mdy === 0 } : { format: 'MDY', confident: dmy === 0 }
 }

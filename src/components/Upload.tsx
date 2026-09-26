@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
-import { ingest, type Ingested } from '../lib/ingest'
+import type { Ingested } from '../lib/ingest'
+import { ingestFiles, type UploadProgress } from '../lib/ingestClient'
 
 interface Props {
   onIngested: (results: Ingested[]) => void
@@ -8,18 +9,34 @@ interface Props {
 
 const ACCEPT = '.pdf,.xlsx,.xls,.xlsm,.csv,.tsv'
 
+/** "2 of 3 · statement.pdf · page 14 of 40", dropping the parts that add nothing. */
+function describe(p: UploadProgress) {
+  return [
+    p.files > 1 && `${p.file} of ${p.files}`,
+    p.name,
+    p.pages && p.pages > 1 && `page ${p.page} of ${p.pages}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 export function Upload({ onIngested, compactMode }: Props) {
-  const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<UploadProgress | null>(null)
+  const busy = progress !== null
   const [over, setOver] = useState(false)
   const input = useRef<HTMLInputElement>(null)
 
   const handle = useCallback(
     async (files: FileList | null) => {
       if (!files?.length) return
-      setBusy(true)
-      const results: Ingested[] = []
-      for (const file of Array.from(files)) results.push(await ingest(file))
-      setBusy(false)
+      const list = Array.from(files)
+      setProgress({ file: 1, files: list.length, name: list[0].name })
+      let results: Ingested[]
+      try {
+        results = await ingestFiles(list, setProgress)
+      } finally {
+        setProgress(null)
+      }
       if (input.current) input.current.value = '' // allow re-selecting the same file
       onIngested(results)
     },
@@ -40,10 +57,20 @@ export function Upload({ onIngested, compactMode }: Props) {
   if (compactMode) {
     return (
       <>
+        {progress && (
+          <span
+            role="status"
+            className="mr-3 max-w-[260px] truncate text-[12px] text-muted"
+            title={describe(progress)}
+          >
+            Reading {describe(progress)}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => input.current?.click()}
-          className="cursor-pointer border border-ink bg-ink px-4 py-2.5 text-[12px] font-medium text-card transition-colors hover:bg-p5"
+          disabled={busy}
+          className="cursor-pointer border border-ink bg-ink px-4 py-2.5 text-[12px] font-medium text-card transition-colors hover:bg-p5 disabled:cursor-wait disabled:opacity-70"
         >
           {busy ? 'Reading…' : 'Add files'}
         </button>
@@ -92,8 +119,22 @@ export function Upload({ onIngested, compactMode }: Props) {
           <p className="max-w-md text-[clamp(2rem,4vw,3.2rem)] font-medium leading-[1.02] tracking-[-0.045em]">
             {busy ? 'Reading your statements…' : 'Drop files here or choose from your device.'}
           </p>
-          <p className="mt-5 max-w-md text-[13px] leading-6 text-card/60">
-            PDF, XLSX, XLS or CSV. Add several accounts for one combined view.
+          <p className="mt-5 max-w-md text-[13px] leading-6 text-card/60" role="status">
+            {progress ? (
+              <>
+                <span className="block truncate text-card/85">{describe(progress)}</span>
+                {progress.pages && progress.pages > 1 && (
+                  <span className="mt-3 block h-[3px] overflow-hidden rounded-full bg-card/15">
+                    <span
+                      className="block h-full rounded-full bg-g1 transition-[width]"
+                      style={{ width: `${((progress.page ?? 0) / progress.pages) * 100}%` }}
+                    />
+                  </span>
+                )}
+              </>
+            ) : (
+              'PDF, XLSX, XLS or CSV. Add several accounts for one combined view.'
+            )}
           </p>
           <div className="mt-8 flex items-center gap-2 border-t border-card/15 pt-5 text-[11px] uppercase tracking-[0.14em] text-card/50">
             <svg viewBox="0 0 24 24" className="size-3.5 stroke-g1" fill="none" strokeWidth="1.8">

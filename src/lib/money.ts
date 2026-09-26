@@ -154,15 +154,19 @@ export function makeFormatters(currency: string, locale = 'en-NG') {
     }
   })()
 
+  // The sign goes before the symbol: "−₦118,479", not "₦-118,479".
+  const sign = (n: number) => (Math.round(n) < 0 ? '−' : '')
+
   const full = (n: number) =>
-    symbol + Math.round(n).toLocaleString(locale, { maximumFractionDigits: 0 })
+    sign(n) + symbol + Math.abs(Math.round(n)).toLocaleString(locale, { maximumFractionDigits: 0 })
 
   const short = (n: number) => {
     const a = Math.abs(n)
-    if (a >= 1e9) return `${symbol}${(n / 1e9).toFixed(2)}b`
-    if (a >= 1e6) return `${symbol}${(n / 1e6).toFixed(2)}m`
-    if (a >= 1e3) return `${symbol}${Math.round(n / 1e3)}k`
-    return `${symbol}${Math.round(n)}`
+    const s = sign(n) + symbol
+    if (a >= 1e9) return `${s}${(a / 1e9).toFixed(2)}b`
+    if (a >= 1e6) return `${s}${(a / 1e6).toFixed(2)}m`
+    if (a >= 1e3) return `${s}${Math.round(a / 1e3)}k`
+    return `${s}${Math.round(a)}`
   }
 
   return { symbol, full, short }

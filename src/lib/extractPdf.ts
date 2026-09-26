@@ -23,6 +23,10 @@ const NUMERIC_HEADER =
 const ANY_HEADER =
   /\b(date|description|narration|particulars|details|remarks|reference|type|channel)\b/i
 
+/** One token of a column header — "Balance After (₦)", "Trans. Time", "Value Date". */
+const HEADER_WORD =
+  /^(?:trans\.?|transaction|time|date|value|description|narration|particulars|details|remarks|reference|ref\.?|type|channel|debit|credit|withdrawals?|deposits?|lodgements?|payments?|amount|balance|money|in|out|dr|cr|after|before|no\.?|\(?(?:₦|\$|£|€|ngn|usd|gbp|eur|ghs|kes|zar)\)?|[/&()-])$/i
+
 /**
  * PDF -> a rectangular grid.
  *
@@ -37,11 +41,15 @@ const ANY_HEADER =
  *   4. Anything between the date and the first money column is the description;
  *      lines with no date and no numbers are wrapped continuations.
  */
-export async function extractPdf(file: File): Promise<RawTable> {
+export async function extractPdf(
+  file: File,
+  onPage?: (page: number, pages: number) => void,
+): Promise<RawTable> {
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
   const lines: Line[] = []
 
   for (let p = 1; p <= pdf.numPages; p++) {
+    onPage?.(p, pdf.numPages)
     const page = await pdf.getPage(p)
     const content = await page.getTextContent()
 
@@ -62,15 +70,39 @@ export async function extractPdf(file: File): Promise<RawTable> {
   }
 
   if (!lines.length) throw new Error('No text found in this PDF — it may be a scan.')
+  if (lines.filter(isRow).length < 3)
+    throw new Error('Could not find dated transaction rows in this PDF.')
 
-  // --- 2. which lines are transaction rows? -------------------------------
-  const isRow = (l: Line) => {
-    const lead = l.items
-      .slice(0, 3)
-      .map((i) => i.text)
-      .join(' ')
-    return looksLikeDate(lead) && l.items.some((i) => looksNumeric(i.text))
+  /*
+   * One PDF can hold several accounts — OPay puts the wallet and the savings
+   * account back to back, each under its own header and with its columns in
+   * different places. Clustered together, the savings balances land in the
+   * wallet's credit column. Like a workbook's savings sheet, the smaller
+   * tables are left out: they'd double-count the auto-save round trips.
+   */
+  const tables = splitTables(lines)
+  const best = tables.reduce((a, b) => (b.rows > a.rows ? b : a))
+  const notes: string[] = []
+  for (const t of tables) {
+    if (t === best || !t.rows) continue
+    notes.push(
+      `Skipped a separate table on ${pageSpan(t.lines)} (${t.rows.toLocaleString('en')} rows, ` +
+        `likely another account) — using the one on ${pageSpan(best.lines)}.`,
+    )
   }
+
+  const firstRow = lines.findIndex(isRow)
+  return {
+    headerIndex: 0,
+    rows: toGrid(best.lines),
+    preamble: lines.slice(0, Math.max(firstRow, 0)).map((l) => l.text),
+    notes,
+  }
+}
+
+/** Steps 2–5 for one table: its own money columns, its own header. */
+function toGrid(lines: Line[]): string[][] {
+  // --- 2. which lines are transaction rows? -------------------------------
   const rowLines = lines.filter(isRow)
   if (rowLines.length < 3)
     throw new Error('Could not find dated transaction rows in this PDF.')
@@ -117,9 +149,27 @@ export async function extractPdf(file: File): Promise<RawTable> {
         (NUMERIC_HEADER.test(l.text) ? 1 : 0) + (ANY_HEADER.test(l.text) ? 1 : 0) >= 2,
     )
 
-  const moneyLabels = headerLine
-    ? headerLine.items.filter((i) => NUMERIC_HEADER.test(i.text))
+  /*
+   * Headers are often set on two baselines — OPay raises "Balance After" a few
+   * points above "Debit" and "Credit" — so labels just above or below count too.
+   *
+   * But only lines made purely of header words. Zenith prints an "Opening
+   * Balance" row 11pt under its header; let in, its "Balance" became a fourth
+   * label for three columns, the labels were then matched by geometry, and the
+   * balance column was read as credits — every row came out as income.
+   */
+  const headerBand = headerLine
+    ? lines.filter(
+        (l) =>
+          l.page === headerLine.page &&
+          Math.abs(l.y - headerLine.y) <= 14 &&
+          !isRow(l) &&
+          (l === headerLine || l.items.every((i) => HEADER_WORD.test(i.text))),
+      )
     : []
+  const moneyLabels = headerBand
+    .flatMap((l) => l.items.filter((i) => NUMERIC_HEADER.test(i.text)))
+    .sort((a, b) => a.x - b.x)
 
   const header = ['Date', 'Description', ...labelColumns(moneyLabels, clusters)]
 
@@ -167,12 +217,64 @@ export async function extractPdf(file: File): Promise<RawTable> {
     }
   }
 
-  const preambleEnd = lines.indexOf(rowLines[0])
-  return {
-    headerIndex: 0,
-    rows,
-    preamble: lines.slice(0, Math.max(preambleEnd, 0)).map((l) => l.text),
+  return rows
+}
+
+const isRow = (l: Line) => {
+  const lead = l.items
+    .slice(0, 3)
+    .map((i) => i.text)
+    .join(' ')
+  return looksLikeDate(lead) && l.items.some((i) => looksNumeric(i.text))
+}
+
+/*
+ * A table's column header: a date or time column and at least two money
+ * columns. Two, so a wrapped description that mentions "payment" and "date"
+ * can't pass for one and start a phantom table.
+ */
+const isTableHeader = (l: Line) =>
+  !isRow(l) &&
+  /\b(date|time)\b/i.test(l.text) &&
+  new Set(l.items.filter((i) => NUMERIC_HEADER.test(i.text)).map((i) => i.text.toLowerCase()))
+    .size >= 2 &&
+  [...l.text.matchAll(/\b\w+\b/g)].length <= 16
+
+/*
+ * Cut the lines into tables at each header. A header repeated on every page
+ * has the same money labels in the same places, so it continues its table
+ * rather than starting a new one.
+ */
+function splitTables(lines: Line[]): { lines: Line[]; rows: number }[] {
+  const layout = (l: Line) =>
+    l.items
+      .filter((i) => NUMERIC_HEADER.test(i.text))
+      .map((i) => `${i.text.toLowerCase()}@${Math.round(i.x / 10)}`)
+      .join(' ')
+
+  const tables = new Map<string, Line[]>()
+  let key = ''
+  for (const line of lines) {
+    if (isTableHeader(line)) key = layout(line)
+    if (!tables.has(key)) tables.set(key, [])
+    tables.get(key)!.push(line)
   }
+
+  // Lines above the first header (the account summary) belong to the first table.
+  const lead = tables.get('')
+  if (lead && tables.size > 1) {
+    tables.delete('')
+    const [first, firstLines] = [...tables][0]
+    tables.set(first, [...lead, ...firstLines])
+  }
+
+  return [...tables.values()].map((t) => ({ lines: t, rows: t.filter(isRow).length }))
+}
+
+function pageSpan(lines: Line[]): string {
+  const pages = lines.map((l) => l.page)
+  const [from, to] = [Math.min(...pages), Math.max(...pages)]
+  return from === to ? `page ${from}` : `pages ${from}–${to}`
 }
 
 /**
@@ -233,7 +335,8 @@ const nearest = (points: number[], v: number) =>
  * doesn't shift every label along by one.
  */
 function labelColumns(labels: Item[], clusters: number[]): string[] {
-  const out = Array.from({ length: clusters.length }, (_, i) => `Amount ${i + 1}`)
+  // Deliberately not "Amount N": detectColumns would take that for a real header.
+  const out = Array.from({ length: clusters.length }, (_, i) => `Column ${i + 3}`)
   if (!labels.length) return out
 
   if (labels.length === clusters.length) return labels.map((l) => l.text.trim())
@@ -244,7 +347,7 @@ function labelColumns(labels: Item[], clusters: number[]): string[] {
       (best, c, i) => (Math.abs(c - centre) < Math.abs(clusters[best] - centre) ? i : best),
       0,
     )
-    if (out[idx].startsWith('Amount ')) out[idx] = label.text.trim()
+    if (out[idx].startsWith('Column ')) out[idx] = label.text.trim()
   }
   return out
 }

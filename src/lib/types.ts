@@ -48,6 +48,8 @@ export interface RawTable {
   rows: string[][]
   /** Lines above the table — account name, number, currency usually live here. */
   preamble: string[]
+  /** What extraction left out or assumed, shown alongside the column notes. */
+  notes?: string[]
 }
 
 export type ColumnRole =

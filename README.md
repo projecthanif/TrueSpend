@@ -176,6 +176,8 @@ src/
     labels.ts         display names for kinds and categories
     storage.ts        opt-in remembered settings + stable row keys
     ingest.ts         one file in, one outcome out
+    ingest.worker.ts  runs ingest() off the main thread
+    ingestClient.ts   worker queue + progress, main-thread fallback
     format.tsx        currency formatting context
     export.ts         PNG capture + RFC 4180 CSV
   components/
@@ -183,6 +185,25 @@ src/
     AnnualInflow.tsx  DailyRhythm.tsx  MonthlyRhythm.tsx
     Breakdown.tsx  BalanceTrend.tsx  Transactions.tsx  ui.tsx
 ```
+
+### Parsing off the main thread
+
+Files are parsed in a Web Worker, one at a time, so a long PDF or a big
+workbook never freezes the page. SheetJS in particular is fully synchronous: a
+30,000-row workbook blocked the page for about a second before this change, and
+now doesn't block it at all. The upload shows which file and, for PDFs, which
+page it's on.
+
+- pdf.js and SheetJS are loaded on demand, only by the worker and only for the
+  file type in hand. Together with drawing every chart as plain SVG (Recharts
+  and its dependencies were over half the bundle, for one line chart) and
+  loading `html-to-image` on the first PNG save, this took the main bundle
+  from 1.4 MB to 262 kB (83 kB gzipped).
+- The worker is an optimisation, not a requirement. If it can't start or dies
+  mid-file, that file and the rest are parsed on the main thread instead.
+- In `npm run dev` the first upload is slow (~10 s for a 60-page PDF) while
+  Vite transforms the worker's modules. A production build doesn't have this
+  cost: the same file takes ~1.4 s cold.
 
 ### Extraction gotchas worth knowing
 
