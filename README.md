@@ -12,6 +12,11 @@ npm run dev
 npm test      # vitest (tests/): classification, dedupe, parsing regressions
 ```
 
+`xlsx` is installed from SheetJS's own CDN (`cdn.sheetjs.com`), not npm. The
+npm package stopped at 0.18.5, which has a prototype-pollution and a ReDoS
+advisory — both reachable here, since the app parses files users drop in. Don't
+switch it back to the npm version; upgrade by changing the version in the URL.
+
 ## What it accepts
 
 | Format               | Notes                                                        |
