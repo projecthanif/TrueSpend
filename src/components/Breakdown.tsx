@@ -1,18 +1,8 @@
 import type { Aggregates } from '../lib/aggregate'
 import type { Category } from '../lib/types'
 import { Card } from './ui'
+import { CATEGORY_LABEL } from '../lib/labels'
 import { useFormat } from '../lib/format'
-
-const LABEL: Record<Category, string> = {
-  transfer: 'Transfers out',
-  card: 'Card & merchant',
-  airtime: 'Airtime',
-  data: 'Mobile data',
-  bills: 'Bills & utilities',
-  loan: 'Loan repayment',
-  cash: 'Cash withdrawal',
-  other: 'Other',
-}
 
 const FILL: Record<Category, string> = {
   transfer: 'bg-p5',
@@ -72,7 +62,7 @@ export function Breakdown({ data }: { data: Aggregates }) {
         ['Section', 'Name', 'Amount', 'Transactions'],
         ...data.categories.map((c) => [
           'Category',
-          LABEL[c.category],
+          CATEGORY_LABEL[c.category],
           c.amount.toFixed(2),
           c.txns,
         ]),
@@ -87,7 +77,7 @@ export function Breakdown({ data }: { data: Aggregates }) {
               key={c.category}
               className={FILL[c.category]}
               style={{ width: `${(c.amount / total) * 100}%` }}
-              title={`${LABEL[c.category]} — ${full(c.amount)}`}
+              title={`${CATEGORY_LABEL[c.category]} — ${full(c.amount)}`}
             />
           ))}
         </div>
@@ -95,7 +85,7 @@ export function Breakdown({ data }: { data: Aggregates }) {
           {data.categories.map((c) => (
             <li key={c.category} className="flex items-center gap-2 text-[13px]">
               <i className={`size-2.5 rounded-[3px] ${FILL[c.category]}`} />
-              <span className="text-body">{LABEL[c.category]}</span>
+              <span className="text-body">{CATEGORY_LABEL[c.category]}</span>
               <span className="font-semibold text-ink">{full(c.amount)}</span>
               <span className="text-muted">{Math.round((c.amount / total) * 100)}%</span>
             </li>

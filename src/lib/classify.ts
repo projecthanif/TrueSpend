@@ -1,4 +1,4 @@
-import type { Category, Identity, Kind, Statement, Txn } from './types'
+import type { Category, Identity, Kind, Overrides, Statement, Txn } from './types'
 
 /**
  * The single most important step in the whole app.
@@ -32,7 +32,11 @@ const CATEGORY_RULES: [RegExp, Category][] = [
   [/\b(mobile\s*data|data\s*(bundle|plan|purchase|sub))\b/i, 'data'],
   [/\b(card\s*payment|pos\s*prch|web\s*prch|mc\s*loc|visa|mastercard|merchant|checkout|purchase|prch)\b/i, 'card'],
   [/\b(electric|power|dstv|gotv|startimes|netflix|spotify|water|cable|tv\s*sub|utilit|rent|insurance|betting|school\s*fee)\b/i, 'bills'],
-  [/\b(loan|repayment|easemoni|okash|branch|fairmoney|carbon|borrow|credit\s*facility)\b/i, 'loan'],
+  /*
+   * "Branch" and "Carbon" are lenders, but "branch" is also in ordinary
+   * narrations ("Lagos branch"), so those two only count in context.
+   */
+  [/\b(loan|repayment|easemoni|okash|fairmoney|getcarbon|carbon\s*(loan|repay)|branch\s*(international|loan|repay)|borrow|credit\s*facility)\b/i, 'loan'],
   [/\b(atm|cash\s*(out|withdraw)|withdrawal\s*agent|cardless)\b/i, 'cash'],
   [/\b(transfer|nip|cip|neft|rtgs|imps|upi|trf|sent\s*to|payment\s*to)\b/i, 'transfer'],
 ]
@@ -113,9 +117,87 @@ export interface Classified {
   warnings: string[]
   /** Totals for the amounts deliberately left out of every chart. */
   excluded: Record<Kind, number>
+  /** Ids of transactions whose kind or category came from a user override. */
+  overridden: Set<string>
 }
 
-export function classify(statements: Statement[], identity: Identity): Classified {
+export const NO_OVERRIDES: Overrides = { byTxn: {}, byCounterparty: {} }
+
+const DAY = 86_400_000
+const daysBetween = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / DAY
+
+/** How far back a reversal may point to the entry it cancels. */
+const REVERSAL_WINDOW_DAYS = 14
+
+/**
+ * Drops entries that more than one statement reports.
+ *
+ * Uploading `Jan-Jun` and `Mar-Dec` for the same account would otherwise count
+ * March to June twice. Two rows are the same entry when the account, date,
+ * direction, amount, description and balance all agree.
+ *
+ * Identical rows *within* one file are legitimate (two ₦500 airtime top-ups on
+ * the same day), so this is a multiset comparison: a later file only loses as
+ * many copies of a row as an earlier file already contributed.
+ */
+function dedupe(statements: Statement[]): { txns: Txn[]; dropped: number } {
+  const seen = new Map<string, number>()
+  const txns: Txn[] = []
+  let dropped = 0
+
+  for (const s of statements) {
+    // Without an account number there's no evidence two files are one account.
+    const account = s.meta.accountNumber || s.id
+    const local = new Map<string, number>()
+    for (const t of s.txns) {
+      const key = [account, t.date, t.direction, t.amount.toFixed(2), t.description, t.balance ?? ''].join('|')
+      const n = (local.get(key) ?? 0) + 1
+      local.set(key, n)
+      if (n <= (seen.get(key) ?? 0)) dropped++
+      else txns.push(t)
+    }
+    for (const [key, n] of local) seen.set(key, Math.max(seen.get(key) ?? 0, n))
+  }
+  return { txns, dropped }
+}
+
+/**
+ * A reversal only cancels half of the picture. The refund itself is excluded,
+ * but the debit it reverses would stay in "money out" — a failed ₦50k transfer
+ * that bounced back would still read as ₦50k spent. So each reversal takes the
+ * nearest earlier external entry on the same account, in the opposite
+ * direction and for the same amount, out of the totals with it.
+ */
+function pairReversals(txns: Txn[], locked: Set<string>) {
+  const taken = new Set<string>()
+  for (const r of txns) {
+    if (r.kind !== 'reversal') continue
+    let match: Txn | undefined
+    for (const t of txns) {
+      if (t.date > r.date) break // sorted by date
+      if (
+        t.kind === 'external' &&
+        !locked.has(t.id) &&
+        !taken.has(t.id) &&
+        t.sourceId === r.sourceId &&
+        t.direction !== r.direction &&
+        Math.abs(t.amount - r.amount) < 0.005 &&
+        daysBetween(t.date, r.date) <= REVERSAL_WINDOW_DAYS
+      )
+        match = t // keep scanning: the latest candidate is the likeliest
+    }
+    if (match) {
+      taken.add(match.id)
+      match.kind = 'reversal'
+    }
+  }
+}
+
+export function classify(
+  statements: Statement[],
+  identity: Identity,
+  overrides: Overrides = NO_OVERRIDES,
+): Classified {
   if (!statements.length) throw new Error('No statements to classify.')
 
   const isSelf = makeSelfMatcher(identity)
@@ -129,7 +211,7 @@ export function classify(statements: Statement[], identity: Identity): Classifie
 
     const own = ownAccountOf.get(t.sourceId) ?? ''
 
-    /*
+  /*
      * An explicit originator marker names the true sender, which matters when
      * the owner's own name also appears as the beneficiary.
      */
@@ -139,14 +221,28 @@ export function classify(statements: Statement[], identity: Identity): Classifie
     return isSelf(t.counterparty, d, own) ? 'self' : 'external'
   }
 
-  const txns = statements
-    .flatMap((s) => s.txns)
-    .map((t) => ({
-      ...t,
-      kind: kindOf(t),
-      category: t.direction === 'out' ? categorise(t.description) : ('transfer' as Category),
-    }))
+  const { txns: unique, dropped } = dedupe(statements)
+  const overridden = new Set<string>()
+  const lockedKind = new Set<string>()
+
+  const txns = unique
+    .map((t) => {
+      const patch = { ...overrides.byCounterparty[t.counterparty], ...overrides.byTxn[t.id] }
+      if (patch.kind || patch.category) overridden.add(t.id)
+      if (patch.kind) lockedKind.add(t.id)
+      return {
+        ...t,
+        kind: patch.kind ?? kindOf(t),
+        category:
+          t.direction === 'out'
+            ? (patch.category ?? categorise(t.description))
+            : ('transfer' as Category),
+      }
+    })
     .sort((a, b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description))
+
+  // A kind the user set by hand is never second-guessed by pairing.
+  pairReversals(txns, lockedKind)
 
   const excluded: Record<Kind, number> = {
     external: 0,
@@ -160,6 +256,10 @@ export function classify(statements: Statement[], identity: Identity): Classifie
   // Mixing currencies would silently add dollars to naira, so say so.
   const currencies = [...new Set(statements.map((s) => s.meta.currency))]
   const warnings = statements.flatMap((s) => s.warnings.map((w) => `${s.fileName}: ${w}`))
+  if (dropped)
+    warnings.push(
+      `${dropped} entr${dropped === 1 ? 'y was' : 'ies were'} in more than one statement and counted once.`,
+    )
   if (currencies.length > 1)
     warnings.push(
       `Statements use different currencies (${currencies.join(', ')}). Totals mix them — set a single currency to compare like with like.`,
@@ -173,5 +273,6 @@ export function classify(statements: Statement[], identity: Identity): Classifie
     currency: currencies[0] ?? 'NGN',
     warnings,
     excluded,
+    overridden,
   }
 }

@@ -8,13 +8,14 @@ import { DailyRhythm } from './components/DailyRhythm'
 import { MonthlyRhythm } from './components/MonthlyRhythm'
 import { Breakdown } from './components/Breakdown'
 import { BalanceTrend } from './components/BalanceTrend'
+import { Transactions } from './components/Transactions'
 import { Stat } from './components/ui'
 import { applyMapping, type Ingested } from './lib/ingest'
-import { classify, suggestIdentity } from './lib/classify'
+import { classify, NO_OVERRIDES, suggestIdentity } from './lib/classify'
 import { aggregate } from './lib/aggregate'
 import { FormatProvider } from './lib/format'
 import { makeFormatters } from './lib/money'
-import type { ColumnMap, Identity, Statement } from './lib/types'
+import type { ColumnMap, Identity, Overrides, Statement } from './lib/types'
 
 type Pending = Extract<Ingested, { status: 'review' }>
 type Failed = Extract<Ingested, { status: 'failed' }>
@@ -23,7 +24,7 @@ const KIND_LABEL: Record<string, string> = {
   self: 'moved between your own accounts',
   internal: 'in-app savings round trips',
   fee: 'bank charges, tax and levies',
-  reversal: 'reversals and refunds',
+  reversal: 'reversed payments and their refunds',
 }
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
   const [failures, setFailures] = useState<Failed[]>([])
   const [identity, setIdentity] = useState<Identity | null>(null)
   const [currency, setCurrency] = useState<string | null>(null)
+  const [overrides, setOverrides] = useState<Overrides>(NO_OVERRIDES)
 
   /*
    * Identity is seeded from the statements but stays user-owned afterwards, so
@@ -53,9 +55,9 @@ export default function App() {
 
   const model = useMemo(() => {
     if (!statements.length || !identity) return null
-    const classified = classify(statements, identity)
+    const classified = classify(statements, identity, overrides)
     return { classified, agg: aggregate(classified) }
-  }, [statements, identity])
+  }, [statements, identity, overrides])
 
   const receive = (results: Ingested[]) => {
     setStatements((prev) => {
@@ -65,13 +67,21 @@ export default function App() {
       return [...kept, ...ready]
     })
     setPending((prev) => [...prev, ...results.filter((r) => r.status === 'review')] as Pending[])
-    setFailures(results.filter((r) => r.status === 'failed') as Failed[])
+    // Accumulate, so adding a second batch doesn't hide the first batch's errors.
+    setFailures((prev) => {
+      const failed = results.filter((r) => r.status === 'failed') as Failed[]
+      const retried = new Set(
+        results.map((r) => (r.status === 'ready' ? r.statement.fileName : r.fileName)),
+      )
+      return [...prev.filter((f) => !retried.has(f.fileName)), ...failed]
+    })
   }
 
   const confirmMapping = (item: Pending, map: ColumnMap) => {
     const result = applyMapping(item.id, item.fileName, item.table, map)
     setPending((prev) => prev.filter((p) => p.id !== item.id))
-    if (result.status === 'ready') setStatements((prev) => [...prev, result.statement])
+    if (result.status === 'ready')
+      setStatements((prev) => [...prev.filter((p) => p.fileName !== item.fileName), result.statement])
     else if (result.status === 'failed') setFailures((prev) => [...prev, result])
   }
 
@@ -81,6 +91,7 @@ export default function App() {
     setFailures([])
     setIdentity(null)
     setCurrency(null)
+    setOverrides(NO_OVERRIDES)
   }
 
   // --- a file needs its columns confirmed ---------------------------------
@@ -226,6 +237,7 @@ export default function App() {
           <MonthlyRhythm data={agg} />
           <Breakdown data={agg} />
           <BalanceTrend data={agg} />
+          <Transactions data={classified} overrides={overrides} onChange={setOverrides} />
         </div>
 
         {excluded.length > 0 && (

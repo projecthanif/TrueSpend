@@ -19,6 +19,8 @@ export type Category =
   | 'other'
 
 export interface Txn {
+  /** Stable within a session — `<sourceId>:<row>`. Overrides are keyed on it. */
+  id: string
   /** ISO date, `YYYY-MM-DD`. */
   date: string
   /** Which uploaded file this came from — the account identity. */
@@ -96,4 +98,19 @@ export interface Identity {
   names: string[]
   /** Account numbers the user owns; a match is conclusive evidence of self. */
   accountNumbers: string[]
+}
+
+/** A user correction to what the classifier decided. */
+export interface Patch {
+  kind?: Kind
+  category?: Category
+}
+
+/**
+ * User corrections. A per-transaction patch wins over a per-counterparty one,
+ * so "everything from X is a self-transfer, except this one" is expressible.
+ */
+export interface Overrides {
+  byTxn: Record<string, Patch>
+  byCounterparty: Record<string, Patch>
 }

@@ -38,7 +38,17 @@ export const CURRENCY_CHOICES = [...CODES].sort()
 export function detectCurrency(text: string): string | undefined {
   const code = /\b([A-Z]{3})\b/g
   for (const m of text.matchAll(code)) if (CODES.has(m[1])) return m[1]
-  for (const [sym, iso] of Object.entries(SYMBOLS)) if (text.includes(sym)) return iso
+  for (const [sym, iso] of Object.entries(SYMBOLS)) {
+    /*
+     * A letter symbol only counts in front of a number. A bare "R" otherwise
+     * matches the R in "IBRAHIM" or "Account Number" and labels every naira
+     * statement as rand.
+     */
+    const found = /^[A-Za-z]+$/.test(sym)
+      ? new RegExp(`\\b${sym}\\s?\\d`).test(text)
+      : text.includes(sym)
+    if (found) return iso
+  }
   return undefined
 }
 

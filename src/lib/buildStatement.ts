@@ -75,6 +75,7 @@ export function buildStatement(
     if (amount === null || !direction) continue
 
     txns.push({
+      id: `${id}:${txns.length}`,
       date,
       sourceId: id,
       direction,

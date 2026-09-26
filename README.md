@@ -9,6 +9,7 @@ no backend, and nothing is stored.
 ```bash
 npm install
 npm run dev
+npm test      # vitest (tests/): classification, dedupe, parsing regressions
 ```
 
 ## What it accepts
@@ -58,6 +59,16 @@ So every transaction is tagged before anything is charted:
 | `fee`      | Bank charges, VAT, stamp duty, levies               | ❌       |
 | `reversal` | Reversed or refunded entries                        | ❌       |
 
+A reversal also takes the entry it cancels out of the totals: the nearest
+earlier entry on the same account, in the opposite direction, for the same
+amount, within 14 days. Otherwise a transfer that bounced back would still read
+as money spent.
+
+Drop in overlapping statements for one account (`Jan–Jun` and `Mar–Dec`) and
+the shared months are counted once. Entries match on account number, date,
+direction, amount, description and balance. Identical rows inside a single
+file are kept, because two ₦500 top-ups on the same day are real.
+
 Excluded totals are shown at the bottom of the dashboard, so nothing is
 silently swept away.
 
@@ -87,6 +98,10 @@ detected from each statement and shown in an editable **This is me** panel.
 - **Monthly rhythm** — every month side by side with totals
 - **Where it goes** — category split plus biggest recipients and senders
 - **Balance trend** — end-of-day balance from the account that reports one
+- **Every transaction** — searchable list of every row behind the charts. Change
+  any row's kind or category and the totals update; **Apply to all** turns one
+  correction into a rule for that counterparty. A row correction beats a
+  counterparty rule, and a kind set by hand is never re-paired as a reversal.
 
 Shade buckets are quantiles of your own data, not fixed thresholds, so a quiet
 year and a heavy year are both readable.
@@ -122,13 +137,14 @@ src/
     counterparty.ts   description -> the other party's name
     classify.ts       self / internal / fee / reversal tagging
     aggregate.ts      derives every series the views render
+    labels.ts         display names for kinds and categories
     ingest.ts         one file in, one outcome out
     format.tsx        currency formatting context
     export.ts         PNG capture + RFC 4180 CSV
   components/
     Upload.tsx  MappingReview.tsx  IdentityPanel.tsx
     AnnualInflow.tsx  DailyRhythm.tsx  MonthlyRhythm.tsx
-    Breakdown.tsx  BalanceTrend.tsx  ui.tsx
+    Breakdown.tsx  BalanceTrend.tsx  Transactions.tsx  ui.tsx
 ```
 
 ### Extraction gotchas worth knowing
@@ -152,5 +168,8 @@ one silently corrupted the output before it was fixed:
   back to the origin.
 - **`--` is not text.** Counting placeholders as content makes a perfectly good
   debit column look like prose and get ignored.
+- **A bare `R` is not rand.** Detecting the rand symbol anywhere in the
+  preamble matched the R in `IBRAHIM` and labelled naira statements ZAR. Letter
+  symbols (`R`, `KSh`) only count directly in front of a number.
 - **Plurals matter.** `Lodgements` not matching a `lodgement` synonym made every
   credit in a GTBank-style file disappear.
